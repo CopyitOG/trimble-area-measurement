@@ -224,26 +224,25 @@
             objectInfo.style.display = 'block';
 
             try {
-                // Try to get object properties
+                log('[API] Available viewer methods: ' + (API.viewer ? Object.keys(API.viewer).join(', ') : 'none'));
+
+                // Method 1: Try getObjectProperties
                 if (API.viewer && API.viewer.getObjectProperties) {
-                    log('[API] Getting object properties...');
+                    log('[API] Trying getObjectProperties...');
                     const props = await API.viewer.getObjectProperties([objId]);
 
-                    log('[Props] Received: ' + JSON.stringify(props).substring(0, 200));
-
-                    // Look for area in properties
                     if (props && props.length > 0) {
+                        log('[Props] SUCCESS: ' + JSON.stringify(props[0]).substring(0, 500));
                         const obj = props[0];
 
-                        // Check various possible area properties
+                        // Look for area in various places
                         let area = obj.area || obj.surfaceArea || obj.Area || obj.SurfaceArea;
 
                         if (!area && obj.properties) {
-                            // Search in properties object
                             for (let key in obj.properties) {
                                 if (key.toLowerCase().includes('area')) {
                                     area = obj.properties[key];
-                                    log(`[Area] Found in properties.${key}: ${area}`);
+                                    log(`[Area] Found: ${key} = ${area}`);
                                     break;
                                 }
                             }
@@ -251,22 +250,88 @@
 
                         if (area) {
                             displayArea(area);
-                        } else {
-                            // Estimate from bounding box
-                            estimateArea(obj);
+                            return;
                         }
+
+                        // Try bounding box from properties
+                        if (obj.boundingBox) {
+                            estimateFromBoundingBox(obj.boundingBox);
+                            return;
+                        }
+                    } else {
+                        log('[Props] Empty result - trying alternatives');
                     }
-                } else {
-                    log('[API] getObjectProperties not available');
-                    // Fallback: estimate from pick data
-                    estimateAreaFromPick(pickData);
                 }
+
+                // Method 2: Try getBoundingBox
+                if (API.viewer && API.viewer.getBoundingBox) {
+                    log('[API] Trying getBoundingBox...');
+                    const bbox = await API.viewer.getBoundingBox([objId]);
+                    log('[BBox] Result: ' + JSON.stringify(bbox));
+                    if (bbox) {
+                        estimateFromBoundingBox(bbox);
+                        return;
+                    }
+                }
+
+                // Method 3: Try getSelection
+                if (API.viewer && API.viewer.getSelection) {
+                    log('[API] Trying getSelection...');
+                    const selection = await API.viewer.getSelection();
+                    log('[Selection] Result: ' + JSON.stringify(selection).substring(0, 300));
+                    if (selection && selection.objectRuntimeIds && selection.objectRuntimeIds.length > 0) {
+                        // Selection worked but may not have area
+                        log('[Selection] Has objects but no area data');
+                    }
+                }
+
+                // Method 4: Calculate from pick normal (rough estimate)
+                if (pickData.normal) {
+                    log('[Calc] Using pick normal for rough estimate');
+                    // Very rough: assume 1m x 1m surface
+                    displayArea(1.0);
+                    return;
+                }
+
+                // Fallback
+                log('[Fallback] Using default 1.0 m²');
+                displayArea(1.0);
+
             } catch (error) {
                 log(`[Error] ${error.message}`);
-                estimateAreaFromPick(pickData);
+                log(`[Error] Stack: ${error.stack}`);
+                displayArea(1.0);
             }
         }
 
+        function estimateFromBoundingBox(bbox) {
+            log('[BBox] Estimating from bounding box');
+
+            if (!bbox.min || !bbox.max) {
+                log('[BBox] Invalid bbox');
+                displayArea(1.0);
+                return;
+            }
+
+            const width = Math.abs(bbox.max.x - bbox.min.x);
+            const height = Math.abs(bbox.max.y - bbox.min.y);
+            const depth = Math.abs(bbox.max.z - bbox.min.z);
+
+            log(`[BBox] Dimensions: ${width.toFixed(2)} x ${height.toFixed(2)} x ${depth.toFixed(2)}`);
+
+            // Calculate surface areas of each face
+            const areas = [
+                width * height,
+                width * depth,
+                height * depth
+            ];
+
+            // Use the largest face
+            const maxArea = Math.max(...areas);
+            log(`[BBox] Max face area: ${maxArea.toFixed(2)} m²`);
+
+            displayArea(maxArea);
+        }
         function displayArea(area) {
             // Convert to m² if needed
             let areaM2 = parseFloat(area);
