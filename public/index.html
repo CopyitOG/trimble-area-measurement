@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Area Measurement Tool - Trimble Connect Extension</title>
+    <title>Area Measurement Tool</title>
     <style>
         * {
             margin: 0;
@@ -13,71 +13,58 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #f5f5f5;
-            padding: 20px;
+            padding: 16px;
         }
 
         .container {
-            max-width: 400px;
-            margin: 0 auto;
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            padding: 20px;
+            padding: 16px;
         }
 
         h1 {
-            font-size: 20px;
+            font-size: 18px;
             color: #333;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .icon {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);
-            border-radius: 6px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
         }
 
         .btn {
             width: 100%;
-            padding: 12px 20px;
+            padding: 10px;
             border: none;
             border-radius: 6px;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
             background: #0078d4;
             color: white;
         }
 
-        .btn-primary:hover {
+        .btn:hover:not(:disabled) {
             background: #005a9e;
         }
 
-        .btn-primary:active {
-            transform: scale(0.98);
-        }
-
-        .btn-primary.active {
+        .btn.active {
             background: #28a745;
         }
 
@@ -87,85 +74,53 @@
         }
 
         .status {
-            margin-top: 16px;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 14px;
-            line-height: 1.5;
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 13px;
         }
 
         .status.info {
             background: #e3f2fd;
             color: #1976d2;
-            border-left: 4px solid #1976d2;
+            border-left: 3px solid #1976d2;
         }
 
         .status.success {
             background: #e8f5e9;
             color: #2e7d32;
-            border-left: 4px solid #2e7d32;
+            border-left: 3px solid #2e7d32;
         }
 
-        .status.error {
-            background: #ffebee;
-            color: #c62828;
-            border-left: 4px solid #c62828;
+        .status.warning {
+            background: #fff3e0;
+            color: #e65100;
+            border-left: 3px solid #ff9800;
         }
 
-        .instructions {
-            margin-top: 16px;
+        .measurement {
+            margin-top: 12px;
             padding: 12px;
-            background: #fff9e6;
-            border-radius: 6px;
-            font-size: 13px;
-            color: #856404;
-            border-left: 4px solid #ffc107;
-        }
-
-        .instructions ol {
-            margin: 8px 0 0 20px;
-        }
-
-        .instructions li {
-            margin: 4px 0;
-        }
-
-        #measurement-display {
-            margin-top: 16px;
-            padding: 16px;
             background: #f8f9fa;
             border-radius: 6px;
-            border: 2px dashed #dee2e6;
             text-align: center;
             display: none;
         }
 
-        #measurement-display.visible {
+        .measurement.visible {
             display: block;
         }
 
         .measurement-value {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: bold;
             color: #0078d4;
-            margin: 8px 0;
+            margin: 4px 0;
         }
 
         .measurement-label {
-            font-size: 14px;
-            color: #6c757d;
-        }
-
-        .debug-info {
-            margin-top: 12px;
-            padding: 8px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            font-size: 11px;
-            font-family: monospace;
+            font-size: 12px;
             color: #666;
-            max-height: 100px;
-            overflow-y: auto;
         }
     </style>
 </head>
@@ -173,219 +128,21 @@
 <body>
     <div class="container">
         <h1>
-            <div class="icon">m²</div>
-            Area Measurement
+            <div class="icon">m²</div> Area Measurement
         </h1>
-
-        <button id="toggle-btn" class="btn btn-primary" disabled>
-            <span id="btn-text">Connecting...</span>
+        <button id="toggle-btn" class="btn">
+            <span id="btn-text">Activate Tool</span>
         </button>
-
-        <div id="status" class="status info">
-            Initializing connection to Trimble Connect...
+        <div id="status" class="status success">
+            Ready! Use Trimble Connect's built-in measurement tools or click Activate for hover mode.
         </div>
-
-        <div class="instructions">
-            <strong>How to use:</strong>
-            <ol>
-                <li>Click "Activate Tool"</li>
-                <li>Click on surfaces in the 3D viewer</li>
-                <li>Area will display for clicked surface</li>
-                <li>Click again to deactivate</li>
-            </ol>
-        </div>
-
-        <div id="measurement-display">
-            <div class="measurement-label">Selected Surface Area</div>
+        <div id="measurement" class="measurement">
+            <div class="measurement-label">Detected Surface Area</div>
             <div class="measurement-value" id="area-value">--</div>
-            <div class="debug-info" id="debug-info">Hover detection active...</div>
         </div>
     </div>
 
-    <!-- Load Trimble Connect Workspace API -->
-    <script type="module">
-        import { connect } from 'https://unpkg.com/trimble-connect-workspace-api@latest/dist/connect.esm.js';
-
-        let workspaceAPI = null;
-        let viewerAPI = null;
-        let isActive = false;
-        let clickListener = null;
-
-        const toggleBtn = document.getElementById('toggle-btn');
-        const btnText = document.getElementById('btn-text');
-        const statusDiv = document.getElementById('status');
-        const measurementDisplay = document.getElementById('measurement-display');
-        const areaValue = document.getElementById('area-value');
-        const debugInfo = document.getElementById('debug-info');
-
-        // Initialize connection to Trimble Connect
-        async function initialize() {
-            try {
-                updateStatus('Connecting to Trimble Connect...', 'info');
-                console.log('Starting connection to Workspace API...');
-
-                // Connect to Workspace API
-                workspaceAPI = await connect(window.parent, (event, args) => {
-                    console.log('Workspace event:', event, args);
-                    addDebug(`Event: ${event}`);
-                });
-
-                console.log('Workspace API connected:', workspaceAPI);
-
-                // Get Viewer API
-                viewerAPI = await workspaceAPI.viewer;
-                console.log('Viewer API obtained:', viewerAPI);
-
-                // Log available methods
-                console.log('ViewerAPI methods:', Object.keys(viewerAPI));
-
-                updateStatus('Connected! Click Activate to start.', 'success');
-                addDebug('Connected successfully');
-
-                // Enable the button
-                toggleBtn.disabled = false;
-                btnText.textContent = 'Activate Tool';
-
-            } catch (error) {
-                console.error('Failed to connect:', error);
-                updateStatus(`Error: ${error.message}`, 'error');
-                addDebug(`Error: ${error.message}`);
-            }
-        }
-
-        // Toggle button handler
-        toggleBtn.addEventListener('click', () => {
-            if (isActive) {
-                deactivateTool();
-            } else {
-                activateTool();
-            }
-        });
-
-        async function activateTool() {
-            isActive = true;
-            toggleBtn.classList.add('active');
-            btnText.textContent = 'Deactivate Tool';
-            measurementDisplay.classList.add('visible');
-            updateStatus('Tool active - click on surfaces to measure', 'success');
-            addDebug('Tool activated');
-
-            // Register click handler with viewer
-            try {
-                // Try to listen for selection events
-                if (viewerAPI && viewerAPI.on) {
-                    console.log('Registering viewer event listeners...');
-
-                    // Listen for selection changes
-                    clickListener = viewerAPI.on('selection', (selection) => {
-                        console.log('Selection event:', selection);
-                        handleSelection(selection);
-                    });
-
-                    addDebug('Listening for surface clicks...');
-                } else {
-                    console.log('ViewerAPI.on not available, trying alternative methods...');
-
-                    // Alternative: try to use pick/raycast if available
-                    if (viewerAPI.pick) {
-                        addDebug('Using pick method');
-                        // Set up interval to check for picks
-                        setupPickDetection();
-                    } else {
-                        console.warn('No viewer interaction method available');
-                        addDebug('Viewer API limited - showing demo mode');
-                        simulateAreaDetection();
-                    }
-                }
-            } catch (error) {
-                console.error('Error setting up tool:', error);
-                addDebug(`Error: ${error.message}`);
-                // Fallback to demo
-                simulateAreaDetection();
-            }
-        }
-
-        function deactivateTool() {
-            isActive = false;
-            toggleBtn.classList.remove('active');
-            btnText.textContent = 'Activate Tool';
-            measurementDisplay.classList.remove('visible');
-            updateStatus('Tool deactivated', 'info');
-            addDebug('Tool deactivated');
-
-            // Remove listener if exists
-            if (clickListener && viewerAPI && viewerAPI.off) {
-                viewerAPI.off('selection', clickListener);
-            }
-        }
-
-        function handleSelection(selection) {
-            console.log('Handling selection:', selection);
-            addDebug(`Selection: ${JSON.stringify(selection).substring(0, 50)}...`);
-
-            // Try to extract area information from selection
-            if (selection && selection.objects && selection.objects.length > 0) {
-                const obj = selection.objects[0];
-                console.log('Selected object:', obj);
-
-                // Try to get geometry/area information
-                if (obj.area) {
-                    displayArea(obj.area);
-                } else if (obj.properties && obj.properties.area) {
-                    displayArea(obj.properties.area);
-                } else {
-                    // Calculate demo area based on object
-                    const demoArea = (Math.random() * 20 + 5).toFixed(2);
-                    displayArea(parseFloat(demoArea));
-                    addDebug('Using estimated area (object properties not available)');
-                }
-            }
-        }
-
-        function displayArea(area) {
-            // Format area
-            let formattedArea;
-            if (area < 0.01) {
-                formattedArea = `${(area * 1000000).toFixed(2)} mm²`;
-            } else if (area < 1) {
-                formattedArea = `${(area * 10000).toFixed(2)} cm²`;
-            } else {
-                formattedArea = `${area.toFixed(2)} m²`;
-            }
-
-            areaValue.textContent = formattedArea;
-            addDebug(`Measured: ${formattedArea}`);
-        }
-
-        // Fallback demo mode
-        function simulateAreaDetection() {
-            if (!isActive) return;
-
-            const demoArea = (Math.random() * 50 + 10).toFixed(2);
-            areaValue.textContent = `${demoArea} m²`;
-            addDebug('Demo mode - random area');
-
-            setTimeout(() => {
-                if (isActive) {
-                    simulateAreaDetection();
-                }
-            }, 3000);
-        }
-
-        function updateStatus(message, type = 'info') {
-            statusDiv.className = `status ${type}`;
-            statusDiv.textContent = message;
-        }
-
-        function addDebug(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            debugInfo.textContent = `[${timestamp}] ${message}\n${debugInfo.textContent}`;
-            console.log(message);
-        }
-
-        // Initialize when page loads
-        initialize();
-    </script>
+    <script src="area-measurement.js"></script>
 </body>
 
 </html>
