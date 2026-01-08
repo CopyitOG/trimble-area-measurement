@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Test - Area Measurement Tool</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .demo-box {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #ffc107;
+            color: #856404;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .info {
+            background: #e3f2fd;
+            border-left: 4px solid #1976d2;
+            padding: 12px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+
+        .next-steps {
+            background: #fff9e6;
+            border-left: 4px solid #ffc107;
+            padding: 16px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+
+        .next-steps h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+
+        .next-steps ol {
+            margin: 10px 0 0 20px;
+        }
+
+        .next-steps li {
+            margin: 8px 0;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="demo-box">
+        <h1>🧪 Quick Test - Area Measurement Tool</h1>
+        <span class="badge">DEMO MODE</span>
+        <p>This is a standalone test of your plugin UI. The area measurements are simulated.</p>
+    </div>
+
+    <div class="demo-box">
+        <iframe src="index.html"></iframe>
+    </div>
+
+    <div class="info">
+        <strong>ℹ️ What you're seeing:</strong>
+        <ul>
+            <li>The UI and button controls work</li>
+            <li>Area values are randomly generated every 2 seconds</li>
+            <li>No actual 3D viewer connection (that requires deployment to Trimble Connect)</li>
+        </ul>
+    </div>
+
+    <div class="next-steps">
+        <h3>📋 Next Steps to Deploy to Your Trimble Connect Project:</h3>
+        <ol>
+            <li><strong>Host these files:</strong> Upload the <code>public/</code> folder to a web server (GitHub Pages,
+                Netlify, etc.)</li>
+            <li><strong>Update manifest.json:</strong> Replace <code>YOUR_HOSTED_URL</code> with your actual domain</li>
+            <li><strong>Register extension:</strong> In Trimble Connect, go to <strong>3D Viewer → Settings →
+                    Extensions</strong></li>
+            <li><strong>Add manifest URL:</strong> Enter <code>https://your-domain/manifest.json</code></li>
+            <li><strong>Open extension:</strong> Your plugin will appear in the Trimble Connect toolbar!</li>
+        </ol>
+        <p style="margin-top: 12px;">
+            <strong>Full instructions:</strong> See <code>DEPLOYMENT.md</code> for detailed deployment guide.
+        </p>
+    </div>
+</body>
+
+</html>

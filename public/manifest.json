@@ -1,0 +1,8 @@
+{
+    "title": "Area Measurement Tool",
+    "description": "Hover-based surface area measurement for 3D models",
+    "url": "YOUR_HOSTED_URL/index.html",
+    "icon": "YOUR_HOSTED_URL/icon.png",
+    "infoUrl": "YOUR_HOSTED_URL/README.html",
+    "enabled": true
+}

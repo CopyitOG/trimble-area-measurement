@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Area Measurement Tool - Trimble Connect Extension</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #0078d4;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #005a9e;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary.active {
+            background: #28a745;
+        }
+
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+
+        .instructions {
+            margin-top: 16px;
+            padding: 12px;
+            background: #fff9e6;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .instructions ol {
+            margin: 8px 0 0 20px;
+        }
+
+        .instructions li {
+            margin: 4px 0;
+        }
+
+        #measurement-display {
+            margin-top: 16px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 2px dashed #dee2e6;
+            text-align: center;
+            display: none;
+        }
+
+        #measurement-display.visible {
+            display: block;
+        }
+
+        .measurement-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #0078d4;
+            margin: 8px 0;
+        }
+
+        .measurement-label {
+            font-size: 14px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <div class="icon">m²</div>
+            Area Measurement
+        </h1>
+
+        <button id="toggle-btn" class="btn btn-primary">
+            <span id="btn-text">Activate Tool</span>
+        </button>
+
+        <div id="status" class="status info">
+            Ready to measure. Click "Activate Tool" to begin.
+        </div>
+
+        <div class="instructions">
+            <strong>How to use:</strong>
+            <ol>
+                <li>Click "Activate Tool"</li>
+                <li>Hover mouse over any surface in the 3D viewer</li>
+                <li>Area will display automatically</li>
+                <li>Click again to deactivate</li>
+            </ol>
+        </div>
+
+        <div id="measurement-display">
+            <div class="measurement-label">Current Surface Area</div>
+            <div class="measurement-value" id="area-value">--</div>
+        </div>
+    </div>
+
+    <!-- Load Trimble Connect Workspace API -->
+    <script type="module">
+        import { connect } from 'https://unpkg.com/trimble-connect-workspace-api@latest/dist/connect.esm.js';
+
+        let workspaceAPI = null;
+        let viewerAPI = null;
+        let isActive = false;
+        let plugin = null;
+
+        const toggleBtn = document.getElementById('toggle-btn');
+        const btnText = document.getElementById('btn-text');
+        const statusDiv = document.getElementById('status');
+        const measurementDisplay = document.getElementById('measurement-display');
+        const areaValue = document.getElementById('area-value');
+
+        // Initialize connection to Trimble Connect
+        async function initialize() {
+            try {
+                updateStatus('Connecting to Trimble Connect...', 'info');
+                
+                // Connect to Workspace API
+                workspaceAPI = await connect(window.parent, (event, args) => {
+                    console.log('Event:', event, args);
+                });
+
+                // Get Viewer API
+                viewerAPI = await workspaceAPI.viewer;
+                
+                updateStatus('Connected! Ready to measure.', 'success');
+
+                // Enable the button
+                toggleBtn.disabled = false;
+                
+                // Initialize plugin (you'll need to import from your built dist)
+                // For now, this is a simplified version
+                initializePlugin();
+
+            } catch (error) {
+                console.error('Failed to connect:', error);
+                updateStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Simplified plugin initialization
+        // In production, import your compiled AreaMeasurementPlugin from dist/
+        function initializePlugin() {
+            // TODO: Replace with actual plugin import
+            // import { AreaMeasurementPlugin } from './dist/AreaMeasurementPlugin.js';
+            // plugin = new AreaMeasurementPlugin(viewerAPI, viewerAPI);
+            
+            console.log('Plugin initialized (simplified mode)');
+        }
+
+        // Toggle button handler
+        toggleBtn.addEventListener('click', () => {
+            if (isActive) {
+                deactivateTool();
+            } else {
+                activateTool();
+            }
+        });
+
+        function activateTool() {
+            isActive = true;
+            toggleBtn.classList.add('active');
+            btnText.textContent = 'Deactivate Tool';
+            measurementDisplay.classList.add('visible');
+            updateStatus('Tool active - hover over surfaces to measure', 'success');
+
+            // TODO: Activate your plugin
+            // if (plugin) {
+            //     plugin.activate();
+            // }
+
+            // Demo: simulate raycasting
+            simulateHoverDetection();
+        }
+
+        function deactivateTool() {
+            isActive = false;
+            toggleBtn.classList.remove('active');
+            btnText.textContent = 'Activate Tool';
+            measurementDisplay.classList.remove('visible');
+            updateStatus('Tool deactivated', 'info');
+
+            // TODO: Deactivate your plugin
+            // if (plugin) {
+            //     plugin.deactivate();
+            // }
+        }
+
+        function updateStatus(message, type = 'info') {
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+
+        // DEMO FUNCTION - Remove in production
+        // This simulates the hover detection
+        function simulateHoverDetection() {
+            if (!isActive) return;
+
+            // Simulate detecting a surface and calculating area
+            const demoArea = (Math.random() * 50 + 10).toFixed(2);
+            areaValue.textContent = `${demoArea} m²`;
+
+            // Continue simulation
+            setTimeout(() => {
+                if (isActive) {
+                    simulateHoverDetection();
+                }
+            }, 2000);
+        }
+
+        // Initialize when page loads
+        initialize();
+    </script>
+</body>
+</html>

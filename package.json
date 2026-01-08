@@ -1,0 +1,27 @@
+{
+  "name": "trimble-connect-area-measurement-plugin",
+  "version": "1.0.0",
+  "description": "Trimble Connect Web 3D Viewer plugin for hover-based area measurement",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rimraf dist"
+  },
+  "keywords": [
+    "trimble-connect",
+    "3d-viewer",
+    "plugin",
+    "area-measurement"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "rimraf": "^5.0.0"
+  },
+  "peerDependencies": {
+    "trimble-connect-workspace-api": "^2.0.0"
+  }
+}
