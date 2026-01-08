@@ -213,8 +213,16 @@
         function handleEvent(event, data) {
             log('[Event] ' + event);
 
-            if (event === 'viewer.onSelectionChange' && data && data.position) {
-                log('[Event] ✓ Got position!');
+            // Trimble Connect uses these specific event names:
+            // - viewer.onPicked - when clicking on surfaces
+            // - viewer.onSelectionChanged - when selection changes
+
+            if (event === 'viewer.onPicked' && data && data.position) {
+                log('[Event] ✓ Got position from PICK!');
+                displayCoordinates(data.position);
+            }
+            else if (event === 'viewer.onSelectionChanged' && data && data.position) {
+                log('[Event] ✓ Got position from SELECTION!');
                 displayCoordinates(data.position);
             }
             else if (event.startsWith('viewer.') && data && data.position) {
