@@ -134,7 +134,7 @@
 <body>
     <div class="container">
         <h1>
-            <div class="icon">XYZ</div> Coordinate Marker v4
+            <div class="icon">XYZ</div> Coordinate Marker v5
         </h1>
         <button id="clear-btn" class="btn danger" style="display:none;">
             Clear All Markers
@@ -165,7 +165,7 @@
             logDiv.textContent = `[${time}] ${msg}\n` + logDiv.textContent;
         }
 
-        log('[v4] Started - position only, no object refs');
+        log('[v5] Using TEXT markers for visibility');
 
         let API = null;
         let markerIds = [];
@@ -194,32 +194,36 @@
             coordZ.textContent = z + ' mm';
             coordinatesDiv.classList.add('visible');
 
-            // Create MINIMAL MarkupPick - position only, NO object references
-            if (API && API.markup && API.markup.addSinglePointMarkups) {
-                const markupId = 'pt-' + Date.now();
+            // Create TEXT markup - visible with label!
+            if (API && API.markup && API.markup.addTextMarkups) {
+                const markupId = 'txt-' + Date.now();
 
-                // Position ONLY - no modelId, no objectRuntimeId
-                const pointMarkup = {
+                const label = 'X:' + x + ' Y:' + y + ' Z:' + z;
+
+                const textMarkup = {
                     id: markupId,
                     start: {
                         positionX: pos.x,
                         positionY: pos.y,
                         positionZ: pos.z
                     },
+                    text: label,
                     color: { r: 0, g: 120, b: 212, a: 255 }
                 };
 
-                log('[Marker] Creating (position only)');
+                log('[Marker] Creating TEXT markup');
 
-                API.markup.addSinglePointMarkups([pointMarkup])
+                API.markup.addTextMarkups([textMarkup])
                     .then(function () {
-                        log('[Marker] ✓ SUCCESS!');
+                        log('[Marker] ✓ TEXT ADDED!');
                         markerIds.push(markupId);
                         clearBtn.style.display = 'block';
                     })
                     .catch(function (err) {
-                        log('[Marker] ✗ FAILED: ' + err.message);
+                        log('[Marker] ✗ ERROR: ' + err.message);
                     });
+            } else {
+                log('[Marker] addTextMarkups not available');
             }
         }
 
@@ -233,9 +237,9 @@
         }
 
         clearBtn.addEventListener('click', function () {
-            if (API && API.markup && API.markup.removeSinglePointMarkups) {
+            if (API && API.markup && API.markup.removeTextMarkups) {
                 log('[Clear] Removing...');
-                API.markup.removeSinglePointMarkups(markerIds)
+                API.markup.removeTextMarkups(markerIds)
                     .then(function () {
                         log('[Clear] ✓ Done');
                         markerIds = [];
@@ -265,6 +269,8 @@
                 API = await TrimbleConnectWorkspace.connect(window.parent, handleEvent);
 
                 log('[API] ✓ Connected');
+                log('[API] addTextMarkups: ' + (API.markup && API.markup.addTextMarkups ? 'YES' : 'NO'));
+
                 updateStatus('Ready! Click surfaces', 'success');
 
             } catch (error) {
