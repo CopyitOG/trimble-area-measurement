@@ -127,6 +127,17 @@
             color: #0078d4;
             font-weight: bold;
         }
+
+        .log {
+            margin-top: 12px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: monospace;
+            max-height: 100px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 
@@ -135,11 +146,11 @@
         <h1>
             <div class="icon">XYZ</div> Surface Coordinates
         </h1>
-        <button id="toggle-btn" class="btn" disabled>
-            <span id="btn-text">Connecting...</span>
+        <button id="toggle-btn" class="btn">
+            <span id="btn-text">Initializing...</span>
         </button>
         <div id="status" class="status info">
-            Connecting to Trimble Connect...
+            Loading extension...
         </div>
         <div id="coordinates" class="coordinates">
             <div class="coord-row">
@@ -155,140 +166,107 @@
                 <span class="coord-value" id="coord-z">--</span>
             </div>
         </div>
+        <div id="log" class="log"></div>
     </div>
 
-    <script src="https://components.connect.trimble.com/trimble-connect-workspace-api/index.js"></script>
     <script>
-        (async function () {
-            let API = null;
-            let isActive = false;
-            const toggleBtn = document.getElementById('toggle-btn');
-            const btnText = document.getElementById('btn-text');
-            const statusDiv = document.getElementById('status');
-            const coordinatesDiv = document.getElementById('coordinates');
-            const coordX = document.getElementById('coord-x');
-            const coordY = document.getElementById('coord-y');
-            const coordZ = document.getElementById('coord-z');
+        // Log to both console and UI
+        function log(msg) {
+            console.log(msg);
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.textContent = `[${time}] ${msg}\n` + logDiv.textContent;
+        }
 
-            // Connect to Workspace API
+        log('[Extension] Script loaded and executing');
+
+        let API = null;
+        let isActive = false;
+        const toggleBtn = document.getElementById('toggle-btn');
+        const btnText = document.getElementById('btn-text');
+        const statusDiv = document.getElementById('status');
+        const coordinatesDiv = document.getElementById('coordinates');
+        const coordX = document.getElementById('coord-x');
+        const coordY = document.getElementById('coord-y');
+        const coordZ = document.getElementById('coord-z');
+
+        function updateStatus(message, type) {
+            statusDiv.className = 'status ' + type;
+            statusDiv.textContent = message;
+            log('[Status] ' + message);
+        }
+
+        function displayCoordinates(position) {
+            log('[Coords] x=' + position.x + ', y=' + position.y + ', z=' + position.z);
+
+            const x = (position.x * 1000).toFixed(0);
+            const y = (position.y * 1000).toFixed(0);
+            const z = (position.z * 1000).toFixed(0);
+
+            coordX.textContent = x + ' mm';
+            coordY.textContent = y + ' mm';
+            coordZ.textContent = z + ' mm';
+
+            coordinatesDiv.classList.add('visible');
+        }
+
+        function handleEvent(event, data) {
+            log('[Event] ' + event);
+
+            if (event === 'viewer.onSelectionChange' && data && data.position) {
+                log('[Event] ✓ Got position!');
+                displayCoordinates(data.position);
+            }
+            else if (event.startsWith('viewer.') && data && data.position) {
+                log('[Event] ✓ Position from ' + event);
+                displayCoordinates(data.position);
+            }
+        }
+
+        // Try to load Workspace API
+        log('[API] Loading Workspace API...');
+
+        const script = document.createElement('script');
+        script.src = 'https://components.connect.trimble.com/trimble-connect-workspace-api/index.js';
+        script.onload = function () {
+            log('[API] Script loaded, attempting connection...');
+            connectToAPI();
+        };
+        script.onerror = function () {
+            log('[API] ERROR: Could not load Workspace API script');
+            updateStatus('Failed to load Workspace API library', 'warning');
+            toggleBtn.disabled = false;
+            btnText.textContent = 'Connection Failed';
+        };
+        document.head.appendChild(script);
+
+        async function connectToAPI() {
             try {
-                console.log('[Coord Tool] Connecting...');
+                log('[API] Calling TrimbleConnectWorkspace.connect...');
+
+                if (typeof TrimbleConnectWorkspace === 'undefined') {
+                    throw new Error('TrimbleConnectWorkspace not defined');
+                }
+
                 API = await TrimbleConnectWorkspace.connect(window.parent, handleEvent);
 
-                console.log('[Coord Tool] Connected!', API);
-                updateStatus('Connected! Click "Activate Tool" to start.', 'success');
+                log('[API] ✓ Connected successfully!');
+                log('[API] API object: ' + typeof API);
+
+                updateStatus('Connected! Click surfaces in the model.', 'success');
                 toggleBtn.disabled = false;
-                btnText.textContent = 'Activate Tool';
+                btnText.textContent = 'Listening to Events';
+                toggleBtn.classList.add('active');
 
             } catch (error) {
-                console.error('[Coord Tool] Connection error:', error);
-                updateStatus('Connection failed: ' + error.message, 'warning');
+                log('[API] ERROR: ' + error.message);
+                updateStatus('Connection error: ' + error.message, 'warning');
+                toggleBtn.disabled = false;
+                btnText.textContent = 'Connection Error';
             }
+        }
 
-            function handleEvent(event, data) {
-                console.log('[Coord Tool] Event:', event, data);
-
-                // Trimble Connect events are prefixed with "viewer."
-                // Listen for viewer.onSelectionChange which has position data
-                if (event === 'viewer.onSelectionChange' && data && data.position) {
-                    console.log('[Coord Tool] ✓ Got position from selection!', data.position);
-                    displayCoordinates(data.position);
-                }
-                // Also handle other viewer events that might have position
-                else if (event.startsWith('viewer.') && data && data.position) {
-                    console.log('[Coord Tool] ✓ Got position from', event, data.position);
-                    displayCoordinates(data.position);
-                }
-                // Fallback for generic position data
-                else if (data && data.position && data.position.x !== undefined) {
-                    console.log('[Coord Tool] ✓ Got position data', data.position);
-                    displayCoordinates(data.position);
-                }
-            }
-
-            toggleBtn.addEventListener('click', toggle);
-
-            async function toggle() {
-                isActive ? deactivate() : await activate();
-            }
-
-            async function activate() {
-                isActive = true;
-                toggleBtn.classList.add('active');
-                btnText.textContent = 'Tool Active ✓';
-                coordinatesDiv.classList.add('visible');
-
-                try {
-                    // Try to activate a picking tool in the viewer
-                    if (API && API.viewer && API.viewer.activateTool) {
-                        await API.viewer.activateTool('reset'); // Reset to default
-                        console.log('[Coord Tool] Default tool activated');
-                    }
-
-                    updateStatus('Tool active - click on model surfaces to see coordinates', 'success');
-
-                    // Also listen for selection changes
-                    if (API && API.viewer && API.viewer.getSelection) {
-                        monitorSelection();
-                    }
-
-                } catch (error) {
-                    console.error('[Coord Tool] Activation error:', error);
-                    updateStatus('Tool active - waiting for picks...', 'warning');
-                }
-            }
-
-            async function monitorSelection() {
-                // Periodically check for selection changes
-                if (!isActive) return;
-
-                try {
-                    const selection = await API.viewer.getSelection();
-                    if (selection && selection.objectRuntimeIds && selection.objectRuntimeIds.length > 0) {
-                        console.log('[Coord Tool] Selection:', selection);
-
-                        // Try to get object properties with position
-                        const props = await API.viewer.getObjectProperties(selection.objectRuntimeIds);
-                        if (props && props[0] && props[0].position) {
-                            displayCoordinates(props[0].position);
-                        }
-                    }
-                } catch (error) {
-                    console.log('[Coord Tool] Selection check:', error.message);
-                }
-
-                setTimeout(monitorSelection, 500);
-            }
-
-            function deactivate() {
-                isActive = false;
-                toggleBtn.classList.remove('active');
-                btnText.textContent = 'Activate Tool';
-                coordinatesDiv.classList.remove('visible');
-                updateStatus('Tool deactivated', 'info');
-            }
-
-            function displayCoordinates(position) {
-                // Position is Vector3 with x, y, z in meters
-                console.log('[Coord Tool] Position:', position);
-
-                // Convert to mm for display (like Trimble's tool)
-                const x = (position.x * 1000).toFixed(0);
-                const y = (position.y * 1000).toFixed(0);
-                const z = (position.z * 1000).toFixed(0);
-
-                coordX.textContent = `${x} mm`;
-                coordY.textContent = `${y} mm`;
-                coordZ.textContent = `${z} mm`;
-
-                coordinatesDiv.classList.add('visible');
-            }
-
-            function updateStatus(message, type) {
-                statusDiv.className = 'status ' + type;
-                statusDiv.textContent = message;
-            }
-        })();
+        log('[Extension] Initialization complete');
     </script>
 </body>
 
