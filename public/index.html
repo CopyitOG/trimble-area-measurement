@@ -58,6 +58,7 @@
             transition: all 0.2s;
             background: #0078d4;
             color: white;
+            margin-bottom: 8px;
         }
 
         .btn:hover:not(:disabled) {
@@ -66,6 +67,10 @@
 
         .btn.active {
             background: #28a745;
+        }
+
+        .btn.danger {
+            background: #dc3545;
         }
 
         .btn:disabled {
@@ -90,12 +95,6 @@
             background: #e8f5e9;
             color: #2e7d32;
             border-left: 3px solid #2e7d32;
-        }
-
-        .status.warning {
-            background: #fff3e0;
-            color: #e65100;
-            border-left: 3px solid #ff9800;
         }
 
         .coordinates {
@@ -135,7 +134,7 @@
             border-radius: 4px;
             font-size: 11px;
             font-family: monospace;
-            max-height: 100px;
+            max-height: 150px;
             overflow-y: auto;
         }
     </style>
@@ -144,13 +143,13 @@
 <body>
     <div class="container">
         <h1>
-            <div class="icon">XYZ</div> Surface Coordinates
+            <div class="icon">XYZ</div> Coordinate Marker
         </h1>
-        <button id="toggle-btn" class="btn">
-            <span id="btn-text">Initializing...</span>
+        <button id="clear-btn" class="btn danger" style="display:none;">
+            Clear All Markers
         </button>
         <div id="status" class="status info">
-            Loading extension...
+            Loading...
         </div>
         <div id="coordinates" class="coordinates">
             <div class="coord-row">
@@ -170,7 +169,6 @@
     </div>
 
     <script>
-        // Log to both console and UI
         function log(msg) {
             console.log(msg);
             const logDiv = document.getElementById('log');
@@ -178,12 +176,11 @@
             logDiv.textContent = `[${time}] ${msg}\n` + logDiv.textContent;
         }
 
-        log('[Extension] Script loaded and executing');
+        log('[Extension] Starting...');
 
         let API = null;
-        let isActive = false;
-        const toggleBtn = document.getElementById('toggle-btn');
-        const btnText = document.getElementById('btn-text');
+        let markerIds = [];
+        const clearBtn = document.getElementById('clear-btn');
         const statusDiv = document.getElementById('status');
         const coordinatesDiv = document.getElementById('coordinates');
         const coordX = document.getElementById('coord-x');
@@ -193,12 +190,9 @@
         function updateStatus(message, type) {
             statusDiv.className = 'status ' + type;
             statusDiv.textContent = message;
-            log('[Status] ' + message);
         }
 
         function displayCoordinates(position) {
-            log('[Coords] x=' + position.x + ', y=' + position.y + ', z=' + position.z);
-
             const x = (position.x * 1000).toFixed(0);
             const y = (position.y * 1000).toFixed(0);
             const z = (position.z * 1000).toFixed(0);
@@ -206,88 +200,95 @@
             coordX.textContent = x + ' mm';
             coordY.textContent = y + ' mm';
             coordZ.textContent = z + ' mm';
-
             coordinatesDiv.classList.add('visible');
+
+            // Create visual marker in 3D using MarkupAPI
+            if (API && API.markup && API.markup.addSinglePointMarkups) {
+                const markupId = 'coord-' + Date.now();
+
+                // Create PointMarkup object with MarkupPick
+                const pointMarkup = {
+                    id: markupId,
+                    start: {
+                        positionX: position.x,
+                        positionY: position.y,
+                        positionZ: position.z
+                    },
+                    color: { r: 0, g: 120, b: 212, a: 255 } // Blue
+                };
+
+                log('[Marker] Creating point markup...');
+                API.markup.addSinglePointMarkups([pointMarkup])
+                    .then(function () {
+                        log('[Marker] ✓ Added to 3D viewer!');
+                        markerIds.push(markupId);
+                        clearBtn.style.display = 'block';
+                    })
+                    .catch(function (err) {
+                        log('[Marker] Error: ' + err.message);
+                    });
+            } else {
+                log('[Marker] Markup API not available');
+            }
         }
 
         function handleEvent(event, data) {
             log('[Event] ' + event);
 
-            // The data is nested! data.data contains the actual event data
+            // Extract nested data
             const eventData = data && data.data ? data.data : data;
 
-            // Log the data structure to see what we're getting
-            if (data) {
-                log('[Data] Keys: ' + Object.keys(data).join(', '));
-                if (data.position) {
-                    log('[Data] Has position!');
-                }
-            } else {
-                log('[Data] No data object');
-            }
-
-            // Trimble Connect uses these specific event names:
-            // - viewer.onPicked - when clicking on surfaces
-            // - viewer.onSelectionChanged - when selection changes
-
+            // Process viewer.onPicked events
             if (event === 'viewer.onPicked' && eventData && eventData.position) {
-                log('[Event] ✓ Got position from PICK!');
-                displayCoordinates(eventData.position);
-            }
-            else if (event === 'viewer.onSelectionChanged' && eventData && eventData.position) {
-                log('[Event] ✓ Got position from SELECTION!');
-                displayCoordinates(eventData.position);
-            }
-            else if (event.startsWith('viewer.') && eventData && eventData.position) {
-                log('[Event] ✓ Position from ' + event);
+                log('[Pick] ✓ Got position!');
                 displayCoordinates(eventData.position);
             }
         }
 
-        // Try to load Workspace API
-        log('[API] Loading Workspace API...');
+        // Clear all markers
+        clearBtn.addEventListener('click', function () {
+            if (API && API.markup && API.markup.removeSinglePointMarkups) {
+                log('[Clear] Removing ' + markerIds.length + ' markers');
+                API.markup.removeSinglePointMarkups(markerIds)
+                    .then(function () {
+                        log('[Clear] ✓ All markers removed');
+                        markerIds = [];
+                        clearBtn.style.display = 'none';
+                    })
+                    .catch(function (err) {
+                        log('[Clear] Error: ' + err.message);
+                    });
+            }
+        });
 
+        // Load Workspace API
         const script = document.createElement('script');
         script.src = 'https://components.connect.trimble.com/trimble-connect-workspace-api/index.js';
         script.onload = function () {
-            log('[API] Script loaded, attempting connection...');
+            log('[API] Script loaded');
             connectToAPI();
         };
         script.onerror = function () {
-            log('[API] ERROR: Could not load Workspace API script');
-            updateStatus('Failed to load Workspace API library', 'warning');
-            toggleBtn.disabled = false;
-            btnText.textContent = 'Connection Failed';
+            log('[API] ERROR: Could not load script');
+            updateStatus('Failed to load Workspace API', 'warning');
         };
         document.head.appendChild(script);
 
         async function connectToAPI() {
             try {
-                log('[API] Calling TrimbleConnectWorkspace.connect...');
-
-                if (typeof TrimbleConnectWorkspace === 'undefined') {
-                    throw new Error('TrimbleConnectWorkspace not defined');
-                }
-
+                log('[API] Connecting...');
                 API = await TrimbleConnectWorkspace.connect(window.parent, handleEvent);
 
-                log('[API] ✓ Connected successfully!');
-                log('[API] API object: ' + typeof API);
+                log('[API] ✓ Connected!');
+                log('[API] Markup available: ' + (API.markup ? 'YES' : 'NO'));
 
-                updateStatus('Connected! Click surfaces in the model.', 'success');
-                toggleBtn.disabled = false;
-                btnText.textContent = 'Listening to Events';
-                toggleBtn.classList.add('active');
+                updateStatus('Connected! Click surfaces to add markers', 'success');
 
             } catch (error) {
                 log('[API] ERROR: ' + error.message);
-                updateStatus('Connection error: ' + error.message, 'warning');
-                toggleBtn.disabled = false;
-                btnText.textContent = 'Connection Error';
+                updateStatus('Connection failed', 'warning');
             }
         }
-
-        log('[Extension] Initialization complete');
     </script>
 </body>
 
