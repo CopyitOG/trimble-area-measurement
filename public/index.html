@@ -65,17 +65,8 @@
             background: #005a9e;
         }
 
-        .btn.active {
-            background: #28a745;
-        }
-
         .btn.danger {
             background: #dc3545;
-        }
-
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
         }
 
         .status {
@@ -143,7 +134,7 @@
 <body>
     <div class="container">
         <h1>
-            <div class="icon">XYZ</div> Coordinate Marker
+            <div class="icon">XYZ</div> Coordinate Marker v4
         </h1>
         <button id="clear-btn" class="btn danger" style="display:none;">
             Clear All Markers
@@ -174,7 +165,7 @@
             logDiv.textContent = `[${time}] ${msg}\n` + logDiv.textContent;
         }
 
-        log('[Ext] v2 Starting...');
+        log('[v4] Started - position only, no object refs');
 
         let API = null;
         let markerIds = [];
@@ -203,18 +194,23 @@
             coordZ.textContent = z + ' mm';
             coordinatesDiv.classList.add('visible');
 
-            // Create marker using FULL pickData as MarkupPick
+            // Create MINIMAL MarkupPick - position only, NO object references
             if (API && API.markup && API.markup.addSinglePointMarkups) {
                 const markupId = 'pt-' + Date.now();
 
-                // Use pickData directly as the MarkupPick!
+                // Position ONLY - no modelId, no objectRuntimeId
                 const pointMarkup = {
                     id: markupId,
-                    start: pickData,  // Complete MarkupPick data
+                    start: {
+                        positionX: pos.x,
+                        positionY: pos.y,
+                        positionZ: pos.z
+                    },
                     color: { r: 0, g: 120, b: 212, a: 255 }
                 };
 
-                log('[Marker] Creating with FULL pick data');
+                log('[Marker] Creating (position only)');
+
                 API.markup.addSinglePointMarkups([pointMarkup])
                     .then(function () {
                         log('[Marker] ✓ SUCCESS!');
@@ -222,7 +218,7 @@
                         clearBtn.style.display = 'block';
                     })
                     .catch(function (err) {
-                        log('[Marker] ERROR: ' + err.message);
+                        log('[Marker] ✗ FAILED: ' + err.message);
                     });
             }
         }
@@ -231,14 +227,14 @@
             const eventData = data && data.data ? data.data : data;
 
             if (event === 'viewer.onPicked' && eventData && eventData.position) {
-                log('[Pick] Surface clicked');
+                log('[Pick] Clicked');
                 displayCoordinates(eventData);
             }
         }
 
         clearBtn.addEventListener('click', function () {
             if (API && API.markup && API.markup.removeSinglePointMarkups) {
-                log('[Clear] Removing markers');
+                log('[Clear] Removing...');
                 API.markup.removeSinglePointMarkups(markerIds)
                     .then(function () {
                         log('[Clear] ✓ Done');
@@ -258,7 +254,7 @@
             connectToAPI();
         };
         script.onerror = function () {
-            log('[API] ERROR loading script');
+            log('[API] ERROR loading');
             updateStatus('Failed to load API', 'warning');
         };
         document.head.appendChild(script);
@@ -268,10 +264,8 @@
                 log('[API] Connecting...');
                 API = await TrimbleConnectWorkspace.connect(window.parent, handleEvent);
 
-                log('[API] ✓ Connected!');
-                log('[API] Markup: ' + (API.markup ? 'YES' : 'NO'));
-
-                updateStatus('Ready! Click surfaces to add markers', 'success');
+                log('[API] ✓ Connected');
+                updateStatus('Ready! Click surfaces', 'success');
 
             } catch (error) {
                 log('[API] ERROR: ' + error.message);
