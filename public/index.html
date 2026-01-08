@@ -213,6 +213,9 @@
         function handleEvent(event, data) {
             log('[Event] ' + event);
 
+            // The data is nested! data.data contains the actual event data
+            const eventData = data && data.data ? data.data : data;
+
             // Log the data structure to see what we're getting
             if (data) {
                 log('[Data] Keys: ' + Object.keys(data).join(', '));
