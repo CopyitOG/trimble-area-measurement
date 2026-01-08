@@ -188,20 +188,20 @@
             function handleEvent(event, data) {
                 console.log('[Coord Tool] Event:', event, data);
 
-                // Look for pick events
-                if (event === 'pick' && data && data.position) {
+                // Trimble Connect events are prefixed with "viewer."
+                // Listen for viewer.onSelectionChange which has position data
+                if (event === 'viewer.onSelectionChange' && data && data.position) {
+                    console.log('[Coord Tool] ✓ Got position from selection!', data.position);
                     displayCoordinates(data.position);
                 }
-                // Selection events might have position data
-                else if (event === 'selection' && data) {
-                    if (data.position) {
-                        displayCoordinates(data.position);
-                    } else if (data.objects && data.objects[0] && data.objects[0].position) {
-                        displayCoordinates(data.objects[0].position);
-                    }
+                // Also handle other viewer events that might have position
+                else if (event.startsWith('viewer.') && data && data.position) {
+                    console.log('[Coord Tool] ✓ Got position from', event, data.position);
+                    displayCoordinates(data.position);
                 }
-                // Any event with Vector3 position
+                // Fallback for generic position data
                 else if (data && data.position && data.position.x !== undefined) {
+                    console.log('[Coord Tool] ✓ Got position data', data.position);
                     displayCoordinates(data.position);
                 }
             }
