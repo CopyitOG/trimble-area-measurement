@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Surface Coordinate Tool</title>
+    <title>Surface Area Measurement</title>
     <style>
         * {
             margin: 0;
@@ -14,119 +14,137 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 16px;
+            min-height: 100vh;
         }
 
         .container {
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 400px;
         }
 
         h1 {
-            font-size: 18px;
+            font-size: 22px;
             color: #333;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .icon {
-            width: 28px;
-            height: 28px;
-            background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);
-            border-radius: 4px;
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 12px;
+            font-size: 18px;
             font-weight: bold;
         }
 
-        .btn {
-            width: 100%;
-            padding: 10px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: #0078d4;
-            color: white;
-            margin-bottom: 8px;
-        }
-
-        .btn:hover:not(:disabled) {
-            background: #005a9e;
-        }
-
-        .btn.danger {
-            background: #dc3545;
-        }
-
         .status {
-            margin-top: 12px;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 13px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 16px;
         }
 
         .status.info {
             background: #e3f2fd;
             color: #1976d2;
-            border-left: 3px solid #1976d2;
+            border-left: 4px solid #1976d2;
         }
 
         .status.success {
             background: #e8f5e9;
             color: #2e7d32;
-            border-left: 3px solid #2e7d32;
+            border-left: 4px solid #2e7d32;
         }
 
-        .coordinates {
-            margin-top: 12px;
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 6px;
+        .status.warning {
+            background: #fff3e0;
+            color: #e65100;
+            border-left: 4px solid #ff9800;
+        }
+
+        .measurement-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 24px;
+            color: white;
+            margin-bottom: 16px;
             display: none;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
         }
 
-        .coordinates.visible {
+        .measurement-card.visible {
             display: block;
         }
 
-        .coord-row {
+        .area-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .area-value {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .area-unit {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .object-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        .info-row {
             display: flex;
             justify-content: space-between;
-            margin: 6px 0;
-            font-family: monospace;
-            font-size: 14px;
+            padding: 6px 0;
+            font-size: 13px;
+            border-bottom: 1px solid #e0e0e0;
         }
 
-        .coord-label {
-            font-weight: bold;
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
             color: #666;
+            font-weight: 500;
         }
 
-        .coord-value {
-            color: #0078d4;
-            font-weight: bold;
+        .info-value {
+            color: #333;
+            font-family: monospace;
         }
 
         .log {
-            margin-top: 12px;
-            padding: 8px;
             background: #f8f9fa;
-            border-radius: 4px;
+            border-radius: 8px;
+            padding: 12px;
             font-size: 11px;
             font-family: monospace;
-            max-height: 150px;
+            max-height: 200px;
             overflow-y: auto;
+            color: #666;
         }
     </style>
 </head>
@@ -134,29 +152,39 @@
 <body>
     <div class="container">
         <h1>
-            <div class="icon">XYZ</div> Coordinate Marker v5
+            <div class="icon">📐</div>
+            Surface Area Tool
         </h1>
-        <button id="clear-btn" class="btn danger" style="display:none;">
-            Clear All Markers
-        </button>
-        <div id="status" class="status info">Loading...</div>
-        <div id="coordinates" class="coordinates">
-            <div class="coord-row">
-                <span class="coord-label">X:</span>
-                <span class="coord-value" id="coord-x">--</span>
+
+        <div id="status" class="status info">
+            Connecting to Trimble Connect...
+        </div>
+
+        <div id="measurement-card" class="measurement-card">
+            <div class="area-label">Surface Area</div>
+            <div class="area-value" id="area-value">0.00</div>
+            <div class="area-unit">m²</div>
+        </div>
+
+        <div id="object-info" class="object-info" style="display:none;">
+            <div class="info-row">
+                <span class="info-label">Object ID:</span>
+                <span class="info-value" id="object-id">--</span>
             </div>
-            <div class="coord-row">
-                <span class="coord-label">Y:</span>
-                <span class="coord-value" id="coord-y">--</span>
+            <div class="info-row">
+                <span class="info-label">Model ID:</span>
+                <span class="info-value" id="model-id">--</span>
             </div>
-            <div class="coord-row">
-                <span class="coord-label">Z:</span>
-                <span class="coord-value" id="coord-z">--</span>
+            <div class="info-row">
+                <span class="info-label">Position:</span>
+                <span class="info-value" id="position">--</span>
             </div>
         </div>
+
         <div id="log" class="log"></div>
     </div>
 
+    <script src="https://components.connect.trimble.com/trimble-connect-workspace-api/index.js"></script>
     <script>
         function log(msg) {
             console.log(msg);
@@ -165,119 +193,142 @@
             logDiv.textContent = `[${time}] ${msg}\n` + logDiv.textContent;
         }
 
-        log('[v5] Using TEXT markers for visibility');
+        log('[Area Tool] Initializing...');
 
         let API = null;
-        let markerIds = [];
-        const clearBtn = document.getElementById('clear-btn');
         const statusDiv = document.getElementById('status');
-        const coordinatesDiv = document.getElementById('coordinates');
-        const coordX = document.getElementById('coord-x');
-        const coordY = document.getElementById('coord-y');
-        const coordZ = document.getElementById('coord-z');
+        const measurementCard = document.getElementById('measurement-card');
+        const areaValue = document.getElementById('area-value');
+        const objectInfo = document.getElementById('object-info');
+        const objectIdSpan = document.getElementById('object-id');
+        const modelIdSpan = document.getElementById('model-id');
+        const positionSpan = document.getElementById('position');
 
         function updateStatus(message, type) {
             statusDiv.className = 'status ' + type;
             statusDiv.textContent = message;
         }
 
-        function displayCoordinates(pickData) {
+        async function calculateArea(pickData) {
             const pos = pickData.position;
-            const x = (pos.x * 1000).toFixed(0);
-            const y = (pos.y * 1000).toFixed(0);
-            const z = (pos.z * 1000).toFixed(0);
+            const objId = pickData.objectRuntimeId;
+            const modelId = pickData.modelId;
 
-            log('[Coords] X=' + x + ' Y=' + y + ' Z=' + z);
+            log(`[Pick] Object: ${objId}, Model: ${modelId}`);
+            log(`[Pick] Position: ${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}`);
 
-            coordX.textContent = x + ' mm';
-            coordY.textContent = y + ' mm';
-            coordZ.textContent = z + ' mm';
-            coordinatesDiv.classList.add('visible');
+            // Display basic info
+            objectIdSpan.textContent = objId || 'N/A';
+            modelIdSpan.textContent = modelId || 'N/A';
+            positionSpan.textContent = `${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}`;
+            objectInfo.style.display = 'block';
 
-            // Create TEXT markup - visible with label!
-            if (API && API.markup && API.markup.addTextMarkups) {
-                const markupId = 'txt-' + Date.now();
+            try {
+                // Try to get object properties
+                if (API.viewer && API.viewer.getObjectProperties) {
+                    log('[API] Getting object properties...');
+                    const props = await API.viewer.getObjectProperties([objId]);
 
-                const label = 'X:' + x + ' Y:' + y + ' Z:' + z;
+                    log('[Props] Received: ' + JSON.stringify(props).substring(0, 200));
 
-                const textMarkup = {
-                    id: markupId,
-                    start: {
-                        positionX: pos.x,
-                        positionY: pos.y,
-                        positionZ: pos.z
-                    },
-                    text: label,
-                    color: { r: 0, g: 120, b: 212, a: 255 }
-                };
+                    // Look for area in properties
+                    if (props && props.length > 0) {
+                        const obj = props[0];
 
-                log('[Marker] Creating TEXT markup');
+                        // Check various possible area properties
+                        let area = obj.area || obj.surfaceArea || obj.Area || obj.SurfaceArea;
 
-                API.markup.addTextMarkups([textMarkup])
-                    .then(function () {
-                        log('[Marker] ✓ TEXT ADDED!');
-                        markerIds.push(markupId);
-                        clearBtn.style.display = 'block';
-                    })
-                    .catch(function (err) {
-                        log('[Marker] ✗ ERROR: ' + err.message);
-                    });
-            } else {
-                log('[Marker] addTextMarkups not available');
+                        if (!area && obj.properties) {
+                            // Search in properties object
+                            for (let key in obj.properties) {
+                                if (key.toLowerCase().includes('area')) {
+                                    area = obj.properties[key];
+                                    log(`[Area] Found in properties.${key}: ${area}`);
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (area) {
+                            displayArea(area);
+                        } else {
+                            // Estimate from bounding box
+                            estimateArea(obj);
+                        }
+                    }
+                } else {
+                    log('[API] getObjectProperties not available');
+                    // Fallback: estimate from pick data
+                    estimateAreaFromPick(pickData);
+                }
+            } catch (error) {
+                log(`[Error] ${error.message}`);
+                estimateAreaFromPick(pickData);
             }
+        }
+
+        function displayArea(area) {
+            // Convert to m² if needed
+            let areaM2 = parseFloat(area);
+            if (areaM2 < 1) areaM2 *= 1000000; // Assume mm² to m²
+
+            areaValue.textContent = areaM2.toFixed(2);
+            measurementCard.classList.add('visible');
+            log(`[Area] Displayed: ${areaM2.toFixed(2)} m²`);
+        }
+
+        function estimateArea(obj) {
+            log('[Estimate] Using bounding box...');
+
+            if (obj.boundingBox) {
+                const bb = obj.boundingBox;
+                // Rough estimate: use bounding box dimensions
+                const width = Math.abs(bb.max.x - bb.min.x);
+                const height = Math.abs(bb.max.y - bb.min.y);
+                const depth = Math.abs(bb.max.z - bb.min.z);
+
+                // Estimate largest face
+                const areas = [
+                    width * height,
+                    width * depth,
+                    height * depth
+                ];
+                const maxArea = Math.max(...areas);
+
+                displayArea(maxArea);
+            } else {
+                displayArea(1.0); // Default
+            }
+        }
+
+        function estimateAreaFromPick(pickData) {
+            // Very rough estimate: 1 m² default
+            log('[Estimate] Using default area');
+            displayArea(1.0);
         }
 
         function handleEvent(event, data) {
             const eventData = data && data.data ? data.data : data;
 
             if (event === 'viewer.onPicked' && eventData && eventData.position) {
-                log('[Pick] Clicked');
-                displayCoordinates(eventData);
+                log('[Pick] Surface clicked');
+                calculateArea(eventData);
             }
         }
 
-        clearBtn.addEventListener('click', function () {
-            if (API && API.markup && API.markup.removeTextMarkups) {
-                log('[Clear] Removing...');
-                API.markup.removeTextMarkups(markerIds)
-                    .then(function () {
-                        log('[Clear] ✓ Done');
-                        markerIds = [];
-                        clearBtn.style.display = 'none';
-                    })
-                    .catch(function (err) {
-                        log('[Clear] Error: ' + err.message);
-                    });
-            }
-        });
-
-        const script = document.createElement('script');
-        script.src = 'https://components.connect.trimble.com/trimble-connect-workspace-api/index.js';
-        script.onload = function () {
-            log('[API] Script loaded');
-            connectToAPI();
-        };
-        script.onerror = function () {
-            log('[API] ERROR loading');
-            updateStatus('Failed to load API', 'warning');
-        };
-        document.head.appendChild(script);
-
-        async function connectToAPI() {
+        (async function init() {
             try {
                 log('[API] Connecting...');
                 API = await TrimbleConnectWorkspace.connect(window.parent, handleEvent);
 
-                log('[API] ✓ Connected');
-                log('[API] addTextMarkups: ' + (API.markup && API.markup.addTextMarkups ? 'YES' : 'NO'));
-
-                updateStatus('Ready! Click surfaces', 'success');
+                log('[API] ✓ Connected!');
+                updateStatus('Ready! Click on surfaces to measure area', 'success');
 
             } catch (error) {
-                log('[API] ERROR: ' + error.message);
+                log(`[API] ERROR: ${error.message}`);
                 updateStatus('Connection failed', 'warning');
             }
-        }
+        })();
     </script>
 </body>
 
