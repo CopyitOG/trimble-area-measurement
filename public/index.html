@@ -227,17 +227,17 @@
             // - viewer.onPicked - when clicking on surfaces
             // - viewer.onSelectionChanged - when selection changes
 
-            if (event === 'viewer.onPicked' && data && data.position) {
+            if (event === 'viewer.onPicked' && eventData && eventData.position) {
                 log('[Event] ✓ Got position from PICK!');
-                displayCoordinates(data.position);
+                displayCoordinates(eventData.position);
             }
-            else if (event === 'viewer.onSelectionChanged' && data && data.position) {
+            else if (event === 'viewer.onSelectionChanged' && eventData && eventData.position) {
                 log('[Event] ✓ Got position from SELECTION!');
-                displayCoordinates(data.position);
+                displayCoordinates(eventData.position);
             }
-            else if (event.startsWith('viewer.') && data && data.position) {
+            else if (event.startsWith('viewer.') && eventData && eventData.position) {
                 log('[Event] ✓ Position from ' + event);
-                displayCoordinates(data.position);
+                displayCoordinates(eventData.position);
             }
         }
 
