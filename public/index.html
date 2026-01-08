@@ -213,6 +213,16 @@
         function handleEvent(event, data) {
             log('[Event] ' + event);
 
+            // Log the data structure to see what we're getting
+            if (data) {
+                log('[Data] Keys: ' + Object.keys(data).join(', '));
+                if (data.position) {
+                    log('[Data] Has position!');
+                }
+            } else {
+                log('[Data] No data object');
+            }
+
             // Trimble Connect uses these specific event names:
             // - viewer.onPicked - when clicking on surfaces
             // - viewer.onSelectionChanged - when selection changes
