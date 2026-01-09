@@ -111,7 +111,12 @@
             background: #f8f9fa;
             border-radius: 8px;
             padding: 12px;
-            margin-top: 12px;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .object-info.visible {
+            display: block;
         }
 
         .info-row {
@@ -153,7 +158,7 @@
     <div class="container">
         <h1>
             <div class="icon">📐</div>
-            Surface Area Tool
+            Area Measurement
         </h1>
 
         <div id="status" class="status info">
@@ -166,7 +171,11 @@
             <div class="area-unit">m²</div>
         </div>
 
-        <div id="object-info" class="object-info" style="display:none;">
+        <div id="object-info" class="object-info">
+            <div class="info-row">
+                <span class="info-label">Object Class:</span>
+                <span class="info-value" id="object-class">--</span>
+            </div>
             <div class="info-row">
                 <span class="info-label">Object ID:</span>
                 <span class="info-value" id="object-id">--</span>
@@ -174,10 +183,6 @@
             <div class="info-row">
                 <span class="info-label">Model ID:</span>
                 <span class="info-value" id="model-id">--</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Position:</span>
-                <span class="info-value" id="position">--</span>
             </div>
         </div>
 
@@ -193,16 +198,16 @@
             logDiv.textContent = `[${time}] ${msg}\n` + logDiv.textContent;
         }
 
-        log('[Area Tool] Initializing...');
+        log('[v6] Fixed API usage with modelId');
 
         let API = null;
         const statusDiv = document.getElementById('status');
         const measurementCard = document.getElementById('measurement-card');
         const areaValue = document.getElementById('area-value');
         const objectInfo = document.getElementById('object-info');
+        const objectClassSpan = document.getElementById('object-class');
         const objectIdSpan = document.getElementById('object-id');
         const modelIdSpan = document.getElementById('model-id');
-        const positionSpan = document.getElementById('position');
 
         function updateStatus(message, type) {
             statusDiv.className = 'status ' + type;
@@ -211,165 +216,125 @@
 
         async function calculateArea(pickData) {
             const pos = pickData.position;
-            const objId = pickData.objectRuntimeId;
+            const objRuntimeId = pickData.objectRuntimeId;
             const modelId = pickData.modelId;
 
-            log(`[Pick] Object: ${objId}, Model: ${modelId}`);
-            log(`[Pick] Position: ${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}`);
+            log(`[Pick] Object: ${objRuntimeId}, Model: ${modelId}`);
 
             // Display basic info
-            objectIdSpan.textContent = objId || 'N/A';
+            objectIdSpan.textContent = objRuntimeId || 'N/A';
             modelIdSpan.textContent = modelId || 'N/A';
-            positionSpan.textContent = `${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}`;
-            objectInfo.style.display = 'block';
+            objectInfo.classList.add('visible');
 
             try {
-                log('[API] Available viewer methods: ' + (API.viewer ? Object.keys(API.viewer).join(', ') : 'none'));
+                // ✅ CORRECT API USAGE: getObjectProperties(modelId, [objectRuntimeIds])
+                log('[API] Calling getObjectProperties with modelId');
+                const props = await API.viewer.getObjectProperties(modelId, [objRuntimeId]);
 
-                // Method 1: Try getObjectProperties
-                if (API.viewer && API.viewer.getObjectProperties) {
-                    log('[API] Trying getObjectProperties...');
-                    const props = await API.viewer.getObjectProperties([objId]);
+                log('[Props] Result length: ' + props.length);
 
-                    if (props && props.length > 0) {
-                        log('[Props] SUCCESS: ' + JSON.stringify(props[0]).substring(0, 500));
-                        const obj = props[0];
+                if (props && props.length > 0) {
+                    const obj = props[0];
+                    log('[Props] Object class: ' + (obj.class || 'N/A'));
+                    log('[Props] Has properties: ' + (obj.properties ? 'YES' : 'NO'));
 
-                        // Look for area in various places
-                        let area = obj.area || obj.surfaceArea || obj.Area || obj.SurfaceArea;
+                    objectClassSpan.textContent = obj.class || 'N/A';
 
-                        if (!area && obj.properties) {
-                            for (let key in obj.properties) {
-                                if (key.toLowerCase().includes('area')) {
-                                    area = obj.properties[key];
-                                    log(`[Area] Found: ${key} = ${area}`);
-                                    break;
+                    // Search for area in PropertySets
+                    if (obj.properties && obj.properties.length > 0) {
+                        log('[Props] PropertySets count: ' + obj.properties.length);
+
+                        let foundArea = false;
+
+                        // Look through all property sets
+                        for (let pset of obj.properties) {
+                            log('[PSet] Set: ' + (pset.set || 'unnamed'));
+
+                            if (pset.properties && pset.properties.length > 0) {
+                                for (let prop of pset.properties) {
+                                    log('[Prop] ' + prop.name + ' = ' + prop.value + ' (type: ' + prop.type + ')');
+
+                                    // PropertyType.AreaMeasure = 1
+                                    if (prop.type === 1) {
+                                        log('[AREA] Found area property: ' + prop.value + ' m²');
+                                        displayArea(prop.value);
+                                        foundArea = true;
+                                        break;
+                                    }
+
+                                    // Also check by name
+                                    if (!foundArea && prop.name && prop.name.toLowerCase().includes('area')) {
+                                        log('[AREA] Found by name: ' + prop.value);
+                                        displayArea(prop.value);
+                                        foundArea = true;
+                                        break;
+                                    }
                                 }
                             }
+
+                            if (foundArea) break;
                         }
 
-                        if (area) {
-                            displayArea(area);
-                            return;
-                        }
-
-                        // Try bounding box from properties
-                        if (obj.boundingBox) {
-                            estimateFromBoundingBox(obj.boundingBox);
-                            return;
+                        if (!foundArea) {
+                            log('[Info] No area property found, estimating...');
+                            estimateArea(modelId, objRuntimeId);
                         }
                     } else {
-                        log('[Props] Empty result - trying alternatives');
+                        log('[Info] No properties available, estimating...');
+                        estimateArea(modelId, objRuntimeId);
                     }
+                } else {
+                    log('[Props] ✗ Empty result');
+                    estimateArea(modelId, objRuntimeId);
                 }
-
-                // Method 2: Try getBoundingBox
-                if (API.viewer && API.viewer.getBoundingBox) {
-                    log('[API] Trying getBoundingBox...');
-                    const bbox = await API.viewer.getBoundingBox([objId]);
-                    log('[BBox] Result: ' + JSON.stringify(bbox));
-                    if (bbox) {
-                        estimateFromBoundingBox(bbox);
-                        return;
-                    }
-                }
-
-                // Method 3: Try getSelection
-                if (API.viewer && API.viewer.getSelection) {
-                    log('[API] Trying getSelection...');
-                    const selection = await API.viewer.getSelection();
-                    log('[Selection] Result: ' + JSON.stringify(selection).substring(0, 300));
-                    if (selection && selection.objectRuntimeIds && selection.objectRuntimeIds.length > 0) {
-                        // Selection worked but may not have area
-                        log('[Selection] Has objects but no area data');
-                    }
-                }
-
-                // Method 4: Calculate from pick normal (rough estimate)
-                if (pickData.normal) {
-                    log('[Calc] Using pick normal for rough estimate');
-                    // Very rough: assume 1m x 1m surface
-                    displayArea(1.0);
-                    return;
-                }
-
-                // Fallback
-                log('[Fallback] Using default 1.0 m²');
-                displayArea(1.0);
 
             } catch (error) {
                 log(`[Error] ${error.message}`);
-                log(`[Error] Stack: ${error.stack}`);
+                estimateArea(modelId, objRuntimeId);
+            }
+        }
+
+        async function estimateArea(modelId, objRuntimeId) {
+            try {
+                // Try getBoundingBox for estimation
+                log('[BBox] Trying getBoundingBox...');
+                const bboxes = await API.viewer.getObjectBoundingBoxes(modelId, [objRuntimeId]);
+
+                if (bboxes && bboxes.length > 0) {
+                    const bbox = bboxes[0].boundingBox;
+                    const width = Math.abs(bbox.max.x - bbox.min.x);
+                    const height = Math.abs(bbox.max.y - bbox.min.y);
+                    const depth = Math.abs(bbox.max.z - bbox.min.z);
+
+                    log(`[BBox] Dims: ${width.toFixed(2)} x ${height.toFixed(2)} x ${depth.toFixed(2)} m`);
+
+                    // Estimate largest face
+                    const areas = [width * height, width * depth, height * depth];
+                    const maxArea = Math.max(...areas);
+
+                    log(`[BBox] Estimated area: ${maxArea.toFixed(2)} m²`);
+                    displayArea(maxArea);
+                } else {
+                    log('[Fallback] Using 1.0 m²');
+                    displayArea(1.0);
+                }
+            } catch (err) {
+                log(`[Error] ${err.message}`);
                 displayArea(1.0);
             }
         }
 
-        function estimateFromBoundingBox(bbox) {
-            log('[BBox] Estimating from bounding box');
-
-            if (!bbox.min || !bbox.max) {
-                log('[BBox] Invalid bbox');
-                displayArea(1.0);
-                return;
-            }
-
-            const width = Math.abs(bbox.max.x - bbox.min.x);
-            const height = Math.abs(bbox.max.y - bbox.min.y);
-            const depth = Math.abs(bbox.max.z - bbox.min.z);
-
-            log(`[BBox] Dimensions: ${width.toFixed(2)} x ${height.toFixed(2)} x ${depth.toFixed(2)}`);
-
-            // Calculate surface areas of each face
-            const areas = [
-                width * height,
-                width * depth,
-                height * depth
-            ];
-
-            // Use the largest face
-            const maxArea = Math.max(...areas);
-            log(`[BBox] Max face area: ${maxArea.toFixed(2)} m²`);
-
-            displayArea(maxArea);
-        }
         function displayArea(area) {
-            // Convert to m² if needed
             let areaM2 = parseFloat(area);
-            if (areaM2 < 1) areaM2 *= 1000000; // Assume mm² to m²
+
+            // Convert if needed (if value seems to be in mm²)
+            if (areaM2 > 1000000) {
+                areaM2 = areaM2 / 1000000;
+                log('[Convert] mm² to m²');
+            }
 
             areaValue.textContent = areaM2.toFixed(2);
             measurementCard.classList.add('visible');
-            log(`[Area] Displayed: ${areaM2.toFixed(2)} m²`);
-        }
-
-        function estimateArea(obj) {
-            log('[Estimate] Using bounding box...');
-
-            if (obj.boundingBox) {
-                const bb = obj.boundingBox;
-                // Rough estimate: use bounding box dimensions
-                const width = Math.abs(bb.max.x - bb.min.x);
-                const height = Math.abs(bb.max.y - bb.min.y);
-                const depth = Math.abs(bb.max.z - bb.min.z);
-
-                // Estimate largest face
-                const areas = [
-                    width * height,
-                    width * depth,
-                    height * depth
-                ];
-                const maxArea = Math.max(...areas);
-
-                displayArea(maxArea);
-            } else {
-                displayArea(1.0); // Default
-            }
-        }
-
-        function estimateAreaFromPick(pickData) {
-            // Very rough estimate: 1 m² default
-            log('[Estimate] Using default area');
-            displayArea(1.0);
         }
 
         function handleEvent(event, data) {
