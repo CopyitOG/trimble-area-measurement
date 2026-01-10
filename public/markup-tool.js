@@ -1,23 +1,21 @@
-// Trimble Connect Attribute Markup Tool
-// Displays customizable property labels on selected 3D elements
+// Trimble Connect Attribute Markup Tool v2.0
+// Uses official Workspace API TextMarkup to display property labels
 
 class AttributeMarkupTool {
     constructor() {
         this.api = null;
         this.selectedElements = new Map(); // objectId -> elementData
-        this.labels = new Map(); // objectId -> labelElement
+        this.markupIds = []; // Track created markup IDs
         this.settings = {
-            fontSize: 16,
-            bgColor: '#667eea',
-            textColor: '#ffffff',
             properties: ['name'] // Which properties to display
         };
 
+        this.version = '2.0.0';
         this.init();
     }
 
     init() {
-        this.log('Initializing Attribute Markup Tool');
+        this.log(`🚀 Initializing Attribute Markup Tool v${this.version}`);
         this.setupUI();
         this.connectToWorkspace();
     }
@@ -26,22 +24,6 @@ class AttributeMarkupTool {
         // Property checkboxes
         document.querySelectorAll('.property-list input[type="checkbox"]').forEach(checkbox => {
             checkbox.addEventListener('change', () => this.updateSelectedProperties());
-        });
-
-        // Font size slider
-        const fontSizeInput = document.getElementById('font-size');
-        const fontSizeValue = document.getElementById('font-size-value');
-        fontSizeInput.addEventListener('input', (e) => {
-            this.settings.fontSize = parseInt(e.target.value);
-            fontSizeValue.textContent = `${this.settings.fontSize}px`;
-        });
-
-        // Color inputs
-        document.getElementById('bg-color').addEventListener('change', (e) => {
-            this.settings.bgColor = e.target.value;
-        });
-        document.getElementById('text-color').addEventListener('change', (e) => {
-            this.settings.textColor = e.target.value;
         });
 
         // Action buttons
@@ -69,8 +51,6 @@ class AttributeMarkupTool {
     }
 
     handleEvent(event, data) {
-        this.log(`Event: ${event}`);
-
         const eventData = data && data.data ? data.data : data;
 
         if (event === 'viewer.onPicked' && eventData && eventData.objectRuntimeId) {
@@ -154,35 +134,51 @@ class AttributeMarkupTool {
     }
 
     async applyLabels() {
-        this.log('Applying labels to selected elements...');
+        this.log('📝 Creating text markups using Workspace API...');
 
-        // Clear existing labels first
-        this.clearLabelsOnly();
+        // Clear existing markups first
+        await this.clearMarkupsOnly();
 
-        // Create labels for each selected element
+        const textMarkups = [];
+
+        // Create text markup for each selected element
         for (const [id, data] of this.selectedElements) {
-            await this.createLabelForElement(data);
+            const markup = await this.createTextMarkup(data);
+            if (markup) {
+                textMarkups.push(markup);
+            }
         }
 
-        // Start updating label positions
-        this.startCameraTracking();
+        if (textMarkups.length === 0) {
+            this.updateStatus('No markups created', 'warning');
+            return;
+        }
 
-        this.updateStatus(`Labels applied to ${this.selectedElements.size} element(s)`, 'success');
-        this.log(`✓ Created ${this.labels.size} labels`);
+        try {
+            // Add all text markups to the viewer
+            const result = await this.api.markup.addTextMarkup(textMarkups);
+            this.markupIds = result.map(m => m.id);
+
+            this.log(`✅ Created ${result.length} text markups in 3D viewer!`);
+            this.updateStatus(`${result.length} label(s) displayed in 3D view`, 'success');
+
+        } catch (error) {
+            this.log(`❌ Error creating markups: ${error.message}`);
+            this.updateStatus('Failed to create markups', 'warning');
+        }
     }
 
-    async createLabelForElement(elementData) {
+    async createTextMarkup(elementData) {
         const { id, modelId, properties, pickData } = elementData;
 
-        // Get element position (use pick position or bounding box center)
+        // Get element position
         let position = pickData.position;
 
         try {
-            // Try to get bounding box for better positioning
+            // Try to get bounding box for better positioning (top of object)
             const bboxes = await this.api.viewer.getObjectBoundingBoxes(modelId, [id]);
             if (bboxes && bboxes.length > 0) {
                 const bbox = bboxes[0].boundingBox;
-                // Use top-center of bounding box
                 position = {
                     x: (bbox.min.x + bbox.max.x) / 2,
                     y: (bbox.min.y + bbox.max.y) / 2,
@@ -193,20 +189,33 @@ class AttributeMarkupTool {
             this.log(`Using pick position for object ${id}`);
         }
 
-        // Format label content based on selected properties
+        // Format label text based on selected properties
         const labelText = this.formatLabelText(properties);
 
-        // Create label HTML element
-        const label = this.createLabelElement(labelText);
+        // Create TextMarkup object
+        // TextMarkup extends LineMarkup, so it needs start and end points
+        // For a simple label, we'll make start and end very close together
+        const textMarkup = {
+            start: {
+                positionX: position.x * 1000, // Convert m to mm
+                positionY: position.y * 1000,
+                positionZ: position.z * 1000,
+                modelId: modelId,
+                objectId: id
+            },
+            end: {
+                positionX: position.x * 1000 + 100, // Small offset for leader line
+                positionY: position.y * 1000,
+                positionZ: position.z * 1000,
+                modelId: modelId,
+                objectId: id
+            },
+            text: labelText,
+            color: { r: 102, g: 126, b: 234, a: 1 } // Purple color
+        };
 
-        // Store label data
-        this.labels.set(id, {
-            element: label,
-            position: position,
-            elementData: elementData
-        });
-
-        this.log(`Label created for object ${id}`);
+        this.log(`Text markup prepared for object ${id}: "${labelText}"`);
+        return textMarkup;
     }
 
     formatLabelText(properties) {
@@ -218,12 +227,12 @@ class AttributeMarkupTool {
             switch (prop) {
                 case 'name':
                     value = properties.product?.name || properties.class || 'Unnamed';
-                    if (value) lines.push(`📌 ${value}`);
+                    if (value) lines.push(value);
                     break;
 
                 case 'class':
                     value = properties.class;
-                    if (value) lines.push(`🏗️ ${value}`);
+                    if (value) lines.push(`Type: ${value}`);
                     break;
 
                 case 'material':
@@ -231,7 +240,7 @@ class AttributeMarkupTool {
                     if (properties.properties) {
                         for (const pset of properties.properties) {
                             if (pset.properties?.Material) {
-                                lines.push(`🎨 Material: ${pset.properties.Material}`);
+                                lines.push(`Material: ${pset.properties.Material}`);
                                 break;
                             }
                         }
@@ -252,7 +261,7 @@ class AttributeMarkupTool {
                                 if (width) dims.push(`W:${this.formatDimension(width)}`);
                                 if (height) dims.push(`H:${this.formatDimension(height)}`);
                                 if (length) dims.push(`L:${this.formatDimension(length)}`);
-                                lines.push(`📏 ${dims.join(' × ')}`);
+                                lines.push(dims.join(' × '));
                                 break;
                             }
                         }
@@ -261,144 +270,29 @@ class AttributeMarkupTool {
             }
         });
 
-        return lines.length > 0 ? lines.join('\n') : 'No data';
+        return lines.length > 0 ? lines.join('\\n') : 'No data';
     }
 
     formatDimension(value) {
-        // Convert to number and format
         const num = typeof value === 'number' ? value : parseFloat(value);
         if (isNaN(num)) return value;
-
-        // Assume meters, format to 2 decimal places
         return `${num.toFixed(2)}m`;
     }
 
-    createLabelElement(text) {
-        const label = document.createElement('div');
-        label.className = 'label-3d';
-        label.textContent = text;
-        label.style.fontSize = `${this.settings.fontSize}px`;
-        label.style.backgroundColor = this.settings.bgColor;
-        label.style.color = this.settings.textColor;
-
-        // CRITICAL FIX: Append to parent window (viewer), not iframe
-        try {
-            if (window.parent && window.parent.document && window.parent.document.body) {
-                window.parent.document.body.appendChild(label);
-                this.log('✓ Label added to parent window (viewer)');
-            } else {
-                document.body.appendChild(label);
-                this.log('⚠ Label added to iframe (will not be visible in 3D)');
-            }
-        } catch (error) {
-            document.body.appendChild(label);
-            this.log(`❌ Error appending to parent: ${error.message}`);
-        }
-
-        return label;
-    }
-
-    startCameraTracking() {
-        if (this.cameraUpdateInterval) {
-            clearInterval(this.cameraUpdateInterval);
-        }
-
-        // Update label positions every 50ms
-        this.cameraUpdateInterval = setInterval(() => {
-            this.updateLabelPositions();
-        }, 50);
-
-        this.log('Camera tracking started');
-    }
-
-    async updateLabelPositions() {
-        if (!this.api || this.labels.size === 0) return;
-
-        try {
-            // Get current camera state
-            const camera = await this.api.viewer.getCamera();
-
-            // Debug log camera once
-            if (!this.cameraLogged) {
-                const camPos = camera.position || { x: 0, y: 0, z: 0 };
-                this.log(`📹 Camera: pos(${camPos.x.toFixed(1)}, ${camPos.y.toFixed(1)}, ${camPos.z.toFixed(1)}), FOV:${camera.fieldOfView}°`);
-                this.cameraLogged = true;
-            }
-
-            let index = 0;
-            this.labels.forEach((labelData, id) => {
-                const worldPos = labelData.position;
-
-                // Debug log first label's world position once
-                if (index === 0 && !this.worldPosLogged) {
-                    this.log(`🎯 Label world pos: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)}, ${worldPos.z.toFixed(2)})`);
-                    this.worldPosLogged = true;
-                }
-
-                const screenPos = this.worldToScreen(worldPos, camera);
-
-                // Debug log first label's screen position once
-                if (index === 0 && !this.screenPosLogged && screenPos) {
-                    this.log(`📺 Label screen pos: (${screenPos.x.toFixed(0)}, ${screenPos.y.toFixed(0)}), visible:${screenPos.visible}`);
-                    this.screenPosLogged = true;
-                }
-
-                if (screenPos && screenPos.visible) {
-                    labelData.element.style.left = `${screenPos.x}px`;
-                    labelData.element.style.top = `${screenPos.y}px`;
-                    labelData.element.style.display = 'block';
-                } else {
-                    // Hide if behind camera or out of view
-                    labelData.element.style.display = 'none';
-                }
-
-                index++;
-            });
-        } catch (error) {
-            if (!this.errorLogged) {
-                this.log(`❌ Camera update error: ${error.message}`);
-                this.errorLogged = true;
+    async clearMarkupsOnly() {
+        if (this.markupIds.length > 0) {
+            try {
+                await this.api.markup.removeMarkups(this.markupIds);
+                this.log(`🗑️ Removed ${this.markupIds.length} markups`);
+                this.markupIds = [];
+            } catch (error) {
+                this.log(`Error removing markups: ${error.message}`);
             }
         }
     }
 
-    worldToScreen(worldPos, camera) {
-        // This is a simplified projection - in production you'd use proper matrix math
-        // For now, use a basic perspective projection
-
-        // Get viewer dimensions (approximate)
-        const viewerWidth = window.parent.innerWidth || 1920;
-        const viewerHeight = window.parent.innerHeight || 1080;
-
-        // Simple perspective projection
-        // This is placeholder - the actual implementation depends on camera parameters
-        const screenX = viewerWidth / 2 + worldPos.x * 10;
-        const screenY = viewerHeight / 2 - worldPos.y * 10;
-
-        return {
-            x: screenX,
-            y: screenY,
-            visible: true // For now, always show
-        };
-    }
-
-    clearLabelsOnly() {
-        // Remove label HTML elements but keep selected elements
-        this.labels.forEach((labelData) => {
-            if (labelData.element && labelData.element.parentNode) {
-                labelData.element.parentNode.removeChild(labelData.element);
-            }
-        });
-        this.labels.clear();
-
-        if (this.cameraUpdateInterval) {
-            clearInterval(this.cameraUpdateInterval);
-            this.cameraUpdateInterval = null;
-        }
-    }
-
-    clearAllLabels() {
-        this.clearLabelsOnly();
+    async clearAllLabels() {
+        await this.clearMarkupsOnly();
         this.selectedElements.clear();
         this.updateSelectedList();
         this.disableApplyButton();
