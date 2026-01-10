@@ -1,0 +1,290 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 16px;
+    min-height: 100vh;
+}
+
+.container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    max-width: 500px;
+}
+
+header {
+    margin-bottom: 20px;
+}
+
+h1 {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.subtitle {
+    color: #666;
+    font-size: 14px;
+}
+
+h2 {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 12px;
+}
+
+/* Status Messages */
+.status {
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 16px;
+}
+
+.status.info {
+    background: #e3f2fd;
+    color: #1976d2;
+    border-left: 4px solid #1976d2;
+}
+
+.status.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-left: 4px solid #2e7d32;
+}
+
+.status.warning {
+    background: #fff3e0;
+    color: #e65100;
+    border-left: 4px solid #ff9800;
+}
+
+/* Panels */
+.panel {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+/* Property List */
+.property-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.checkbox-label:hover {
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    cursor: pointer;
+}
+
+.checkbox-label span {
+    font-size: 14px;
+    color: #333;
+}
+
+/* Settings Grid */
+.settings-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.setting-item label {
+    font-size: 13px;
+    color: #666;
+    font-weight: 500;
+}
+
+.setting-item input[type="range"] {
+    width: 100%;
+}
+
+.setting-item input[type="color"] {
+    width: 100%;
+    height: 40px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#font-size-value {
+    font-size: 12px;
+    color: #666;
+}
+
+/* Buttons */
+.actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: #f43f5e;
+    color: white;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.4);
+}
+
+/* Selected List */
+.selected-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.placeholder {
+    color: #999;
+    font-size: 13px;
+    text-align: center;
+    padding: 20px;
+}
+
+.selected-item {
+    padding: 10px;
+    background: white;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.selected-item .name {
+    font-weight: 500;
+    color: #333;
+}
+
+.selected-item .type {
+    color: #666;
+    font-size: 12px;
+}
+
+.selected-item .remove {
+    color: #f43f5e;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* Debug Section */
+.debug-section {
+    margin-top: 16px;
+    font-size: 13px;
+}
+
+.debug-section summary {
+    cursor: pointer;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    color: #666;
+}
+
+.log {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 8px;
+}
+
+.log-entry {
+    margin-bottom: 4px;
+}
+
+.log-time {
+    color: #858585;
+}
+
+/* 3D Labels */
+.label-3d {
+    position: fixed;
+    padding: 8px12px;
+    border-radius: 6px;
+    font-weight: 500;
+    white-space: pre-line;
+    pointer-events: none;
+    z-index: 10000;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transform: translate(-50%, -100%);
+    animation: labelAppear 0.3s ease-out;
+    line-height: 1.4;
+    min-width: 120px;
+    text-align: center;
+}
+
+@keyframes labelAppear {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -100%) scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, -100%) scale(1);
+    }
+}

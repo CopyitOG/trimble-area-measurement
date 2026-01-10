@@ -1,8 +1,0 @@
-{
-    "title": "Area Measurement Tool",
-    "description": "Hover-based surface area measurement for 3D models",
-    "url": "https://copyitog.github.io/trimble-area-measurement/public/index.html",
-    "icon": "https://copyitog.github.io/trimble-area-measurement/public/icon.png",
-    "infoUrl": "https://copyitog.github.io/trimble-area-measurement/public/test.html",
-    "enabled": true
-}

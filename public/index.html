@@ -4,328 +4,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Face Area Measurement</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 16px;
-            min-height: 100vh;
-        }
-
-        .container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            max-width: 400px;
-        }
-
-        h1 {
-            font-size: 22px;
-            color: #333;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .icon {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .status {
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 16px;
-        }
-
-        .status.info {
-            background: #e3f2fd;
-            color: #1976d2;
-            border-left: 4px solid #1976d2;
-        }
-
-        .status.success {
-            background: #e8f5e9;
-            color: #2e7d32;
-            border-left: 4px solid #2e7d32;
-        }
-
-        .status.warning {
-            background: #fff3e0;
-            color: #e65100;
-            border-left: 4px solid #ff9800;
-        }
-
-        .measurement-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            padding: 24px;
-            color: white;
-            margin-bottom: 16px;
-            display: none;
-            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
-        }
-
-        .measurement-card.visible {
-            display: block;
-        }
-
-        .face-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            opacity: 0.9;
-            margin-bottom: 4px;
-        }
-
-        .face-name {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 12px;
-        }
-
-        .area-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            opacity: 0.9;
-            margin-bottom: 8px;
-        }
-
-        .area-value {
-            font-size: 48px;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-
-        .area-unit {
-            font-size: 18px;
-            opacity: 0.9;
-        }
-
-        .object-info {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
-            display: none;
-        }
-
-        .object-info.visible {
-            display: block;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            font-size: 13px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
-        }
-
-        .info-label {
-            color: #666;
-            font-weight: 500;
-        }
-
-        .info-value {
-            color: #333;
-            font-family: monospace;
-        }
-
-        .log {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 12px;
-            font-size: 11px;
-            font-family: monospace;
-            max-height: 200px;
-            overflow-y: auto;
-            color: #666;
-        }
-    </style>
+    <title>Attribute Markup</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
     <div class="container">
-        <h1>
-            <div class="icon">📐</div>
-            Face Area
-        </h1>
+        <header>
+            <h1>🏷️ Attribute Markup</h1>
+            <p class="subtitle">Display custom property labels on selected elements</p>
+        </header>
 
         <div id="status" class="status info">
             Connecting to Trimble Connect...
         </div>
 
-        <div id="measurement-card" class="measurement-card">
-            <div class="face-label">Face Detected</div>
-            <div class="face-name" id="face-name">--</div>
-            <div class="area-label">Surface Area</div>
-            <div class="area-value" id="area-value">0.00</div>
-            <div class="area-unit">m²</div>
-        </div>
+        <!-- Property Selector -->
+        <section class="panel">
+            <h2>Select Properties to Display</h2>
+            <div class="property-list">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="prop-name" value="name" checked>
+                    <span>Element Name</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="prop-type" value="class">
+                    <span>Element Type</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="prop-material" value="material">
+                    <span>Material</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="prop-dimensions" value="dimensions">
+                    <span>Dimensions</span>
+                </label>
+            </div>
+        </section>
 
-        <div id="object-info" class="object-info">
-            <div class="info-row">
-                <span class="info-label">Normal Vector:</span>
-                <span class="info-value" id="normal-vec">--</span>
+        <!-- Label Settings -->
+        <section class="panel">
+            <h2>Label Settings</h2>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <label for="font-size">Font Size</label>
+                    <input type="range" id="font-size" min="12" max="24" value="16">
+                    <span id="font-size-value">16px</span>
+                </div>
+                <div class="setting-item">
+                    <label for="bg-color">Background</label>
+                    <input type="color" id="bg-color" value="#667eea">
+                </div>
+                <div class="setting-item">
+                    <label for="text-color">Text Color</label>
+                    <input type="color" id="text-color" value="#ffffff">
+                </div>
             </div>
-            <div class="info-row">
-                <span class="info-label">Dimensions:</span>
-                <span class="info-value" id="dimensions">--</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Object ID:</span>
-                <span class="info-value" id="object-id">--</span>
-            </div>
-        </div>
+        </section>
 
-        <div id="log" class="log"></div>
+        <!-- Actions -->
+        <section class="actions">
+            <button id="apply-btn" class="btn btn-primary" disabled>
+                Apply to Selected
+            </button>
+            <button id="clear-btn" class="btn btn-secondary">
+                Clear All Labels
+            </button>
+        </section>
+
+        <!-- Selected Elements -->
+        <section class="panel">
+            <h2>Selected Elements (<span id="selected-count">0</span>)</h2>
+            <div id="selected-list" class="selected-list">
+                <p class="placeholder">Click on elements in the 3D view to select them</p>
+            </div>
+        </section>
+
+        <!-- Debug Log -->
+        <details class="debug-section">
+            <summary>Debug Log</summary>
+            <div id="log" class="log"></div>
+        </details>
     </div>
 
     <script src="https://components.connect.trimble.com/trimble-connect-workspace-api/index.js"></script>
-    <script>
-        function log(msg) {
-            console.log(msg);
-            const logDiv = document.getElementById('log');
-            const time = new Date().toLocaleTimeString();
-            logDiv.textContent = `[${time}] ${msg}\n` + logDiv.textContent;
-        }
-
-        log('[v7] Face Area - Plan C Implementation');
-
-        let API = null;
-        const statusDiv = document.getElementById('status');
-        const measurementCard = document.getElementById('measurement-card');
-        const areaValue = document.getElementById('area-value');
-        const faceNameSpan = document.getElementById('face-name');
-        const objectInfo = document.getElementById('object-info');
-        const normalVecSpan = document.getElementById('normal-vec');
-        const dimensionsSpan = document.getElementById('dimensions');
-        const objectIdSpan = document.getElementById('object-id');
-
-        function updateStatus(message, type) {
-            statusDiv.className = 'status ' + type;
-            statusDiv.textContent = message;
-        }
-
-        async function calculateFaceArea(pickData) {
-            const { position, normal, objectRuntimeId, modelId } = pickData;
-
-            log(`[Click] Object: ${objectRuntimeId}, Model: ${modelId}`);
-            log(`[Normal] x:${normal.x.toFixed(3)}, y:${normal.y.toFixed(3)}, z:${normal.z.toFixed(3)}`);
-
-            // Display object info
-            objectIdSpan.textContent = objectRuntimeId || 'N/A';
-            normalVecSpan.textContent = `(${normal.x.toFixed(2)}, ${normal.y.toFixed(2)}, ${normal.z.toFixed(2)})`;
-            objectInfo.classList.add('visible');
-
-            try {
-                // Get bounding box
-                log('[API] Getting bounding box...');
-                const bboxes = await API.viewer.getObjectBoundingBoxes(modelId, [objectRuntimeId]);
-
-                if (!bboxes || bboxes.length === 0) {
-                    log('[Error] No bounding box found');
-                    updateStatus('Could not get object dimensions', 'warning');
-                    return;
-                }
-
-                const bbox = bboxes[0].boundingBox;
-                log(`[BBox] Min: (${bbox.min.x}, ${bbox.min.y}, ${bbox.min.z})`);
-                log(`[BBox] Max: (${bbox.max.x}, ${bbox.max.y}, ${bbox.max.z})`);
-
-                // Calculate dimensions (bbox values are already in meters)
-                const width = Math.abs(bbox.max.x - bbox.min.x);
-                const height = Math.abs(bbox.max.y - bbox.min.y);
-                const depth = Math.abs(bbox.max.z - bbox.min.z);
-
-                log(`[Dims] W:${width.toFixed(2)}m H:${height.toFixed(2)}m D:${depth.toFixed(2)}m`);
-                dimensionsSpan.textContent = `${width.toFixed(2)} × ${height.toFixed(2)} × ${depth.toFixed(2)} m`;
-
-                // Determine which face based on normal vector
-                const absNormal = {
-                    x: Math.abs(normal.x),
-                    y: Math.abs(normal.y),
-                    z: Math.abs(normal.z)
-                };
-
-                let faceArea;
-                let faceName;
-
-                if (absNormal.z > absNormal.x && absNormal.z > absNormal.y) {
-                    // Top or bottom face (XY plane)
-                    faceArea = width * height;
-                    faceName = normal.z > 0 ? "Top Face" : "Bottom Face";
-                } else if (absNormal.x > absNormal.y) {
-                    // Left or right face (YZ plane)
-                    faceArea = height * depth;
-                    faceName = normal.x > 0 ? "Right Face" : "Left Face";
-                } else {
-                    // Front or back face (XZ plane)
-                    faceArea = width * depth;
-                    faceName = normal.y > 0 ? "Front Face" : "Back Face";
-                }
-
-                log(`[Result] ${faceName}: ${faceArea.toFixed(2)} m²`);
-
-                // Display results
-                faceNameSpan.textContent = faceName;
-                areaValue.textContent = faceArea.toFixed(2);
-                measurementCard.classList.add('visible');
-                updateStatus('Face area calculated!', 'success');
-
-            } catch (error) {
-                log(`[Error] ${error.message}`);
-                updateStatus('Error calculating face area', 'warning');
-            }
-        }
-
-        function handleEvent(event, data) {
-            const eventData = data && data.data ? data.data : data;
-
-            if (event === 'viewer.onPicked' && eventData && eventData.position) {
-                log('[Event] Surface clicked!');
-                calculateFaceArea(eventData);
-            }
-        }
-
-        (async function init() {
-            try {
-                log('[API] Connecting...');
-                API = await TrimbleConnectWorkspace.connect(window.parent, handleEvent);
-
-                log('[API] ✓ Connected!');
-                updateStatus('Ready! Click on any surface to measure face area', 'success');
-
-            } catch (error) {
-                log(`[API] ERROR: ${error.message}`);
-                updateStatus('Connection failed', 'warning');
-            }
-        })();
-    </script>
+    <script src="markup-tool.js"></script>
 </body>
 
 </html>

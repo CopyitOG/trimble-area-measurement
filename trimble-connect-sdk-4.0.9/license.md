@@ -1,1 +1,0 @@
-https://community.trimble.com/docs/DOC-10021
