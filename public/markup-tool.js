@@ -221,8 +221,9 @@ class AttributeMarkupTool {
             objectProps.properties.forEach((pset, idx) => {
                 this.log(`  📦 PropertySet[${idx}]: "${pset.name}"`);
                 if (pset.properties) {
-                    Object.keys(pset.properties).forEach(key => {
-                        const value = pset.properties[key];
+                    // Handle both object and array property structures
+                    const props = this.normalizeProperties(pset.properties);
+                    Object.entries(props).forEach(([key, value]) => {
                         this.log(`      - "${key}" = "${value}"`);
                     });
                 }
@@ -230,6 +231,38 @@ class AttributeMarkupTool {
         } else {
             this.log(`  ⚠️ No property sets found`);
         }
+    }
+
+    normalizeProperties(properties) {
+        // Properties might be an object or an array of property objects
+        if (Array.isArray(properties)) {
+            // Array format: [{ name: "PropName", value: "PropValue" }, ...]
+            const normalized = {};
+            properties.forEach(prop => {
+                if (prop && typeof prop === 'object') {
+                    const name = prop.name || prop.Name || prop.key || prop.Key;
+                    const value = prop.value || prop.Value || prop.val;
+                    if (name) {
+                        normalized[name] = value;
+                    }
+                }
+            });
+            return normalized;
+        } else if (typeof properties === 'object') {
+            // Object format: might have nested objects
+            const normalized = {};
+            for (const [key, val] of Object.entries(properties)) {
+                if (val && typeof val === 'object' && !Array.isArray(val)) {
+                    // Nested object, try to extract value
+                    const value = val.value || val.Value || val.val || JSON.stringify(val);
+                    normalized[key] = value;
+                } else {
+                    normalized[key] = val;
+                }
+            }
+            return normalized;
+        }
+        return properties;
     }
 
     findPropertyValue(objectProps, propertyName) {
