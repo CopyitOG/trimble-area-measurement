@@ -8,7 +8,7 @@ class AttributeMarkupTool {
         this.markupIds = []; // Track created markup IDs
         this.propertyNames = ['Name', 'Type']; // Default properties
 
-        this.version = '2.1.1';
+        this.version = '2.1.2';
         this.init();
     }
 
