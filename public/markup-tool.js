@@ -8,7 +8,17 @@ class AttributeMarkupTool {
         this.markupIds = []; // Track created markup IDs
         this.propertyNames = ['Name', 'Type']; // Default properties
 
-        this.version = '2.1.2';
+        // Property name aliases - map Trimble UI names to actual API names
+        this.propertyAliases = {
+            'product description': ['Name', 'Description', 'ObjectType'],
+            'file name': ['FileName', 'File'],
+            'guid': ['GlobalId', 'GUID', 'G-UID (IFC)'],
+            'load bearing': ['LoadBearing', 'IsLoadBearing'],
+            'element name': ['Name', 'ObjectType'],
+            'element type': ['ObjectType', 'Type', 'PredefinedType']
+        };
+
+        this.version = '2.1.3';
         this.init();
     }
 
@@ -287,6 +297,7 @@ class AttributeMarkupTool {
 
     findPropertyValue(objectProps, propertyName) {
         const nameLower = propertyName.toLowerCase();
+        const nameNoSpaces = propertyName.replace(/\s+/g, '').toLowerCase();
 
         // Check direct properties first
         if (nameLower === 'name') {
@@ -295,6 +306,29 @@ class AttributeMarkupTool {
         if (nameLower === 'type' || nameLower === 'class') {
             return objectProps.class;
         }
+
+        // Check if there's an alias for this property name
+        const searchNames = [propertyName];
+        if (this.propertyAliases && this.propertyAliases[nameLower]) {
+            searchNames.push(...this.propertyAliases[nameLower]);
+            this.log(`🔄 Using aliases for "${propertyName}": ${this.propertyAliases[nameLower].join(', ')}`);
+        }
+
+        // Search for each possible name (original + aliases)
+        for (const searchName of searchNames) {
+            const result = this.searchInPropertySets(objectProps, searchName);
+            if (result !== null) {
+                return result;
+            }
+        }
+
+        this.log(`✗ Property "${propertyName}" not found in any property set`);
+        return null;
+    }
+
+    searchInPropertySets(objectProps, propertyName) {
+        const nameLower = propertyName.toLowerCase();
+        const nameNoSpaces = propertyName.replace(/\s+/g, '').toLowerCase();
 
         // Search in ALL property sets
         if (objectProps.properties) {
@@ -312,10 +346,23 @@ class AttributeMarkupTool {
                     }
                 }
 
-                // Try contains match (property name contains search term or vice versa)
+                // Try exact match without spaces
+                for (const [key, value] of Object.entries(props)) {
+                    const keyNoSpaces = key.replace(/\s+/g, '').toLowerCase();
+                    if (keyNoSpaces === nameNoSpaces) {
+                        this.log(`✓ Found exact match (ignoring spaces) in "${pset.name}": "${key}" = "${value}"`);
+                        return this.formatValue(value);
+                    }
+                }
+
+                // Try partial match - ONLY if property name contains search term
+                // (not if search term contains property name - that was the bug!)
                 for (const [key, value] of Object.entries(props)) {
                     const keyLower = key.toLowerCase();
-                    if (keyLower.includes(nameLower) || nameLower.includes(keyLower)) {
+                    const keyNoSpaces = key.replace(/\s+/g, '').toLowerCase();
+
+                    // Property name must contain the search term
+                    if (keyLower.includes(nameLower) || keyNoSpaces.includes(nameNoSpaces)) {
                         this.log(`✓ Found partial match in "${pset.name}": "${key}" = "${value}"`);
                         return this.formatValue(value);
                     }
@@ -323,7 +370,6 @@ class AttributeMarkupTool {
             }
         }
 
-        this.log(`✗ Property "${propertyName}" not found in any property set`);
         return null;
     }
 
