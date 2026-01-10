@@ -240,9 +240,16 @@ class AttributeMarkupTool {
             const normalized = {};
             properties.forEach(prop => {
                 if (prop && typeof prop === 'object') {
-                    const name = prop.name || prop.Name || prop.key || prop.Key;
-                    const value = prop.value || prop.Value || prop.val;
-                    if (name) {
+                    // Try multiple possible name fields
+                    const name = prop.name || prop.Name || prop.key || prop.Key || prop.propertyName;
+                    // Try multiple possible value fields
+                    const value = prop.value !== undefined ? prop.value :
+                        prop.Value !== undefined ? prop.Value :
+                            prop.val !== undefined ? prop.val :
+                                prop.nominalValue !== undefined ? prop.nominalValue :
+                                    prop.NominalValue !== undefined ? prop.NominalValue : null;
+
+                    if (name && value !== null && value !== undefined) {
                         normalized[name] = value;
                     }
                 }
@@ -253,8 +260,21 @@ class AttributeMarkupTool {
             const normalized = {};
             for (const [key, val] of Object.entries(properties)) {
                 if (val && typeof val === 'object' && !Array.isArray(val)) {
-                    // Nested object, try to extract value
-                    const value = val.value || val.Value || val.val || JSON.stringify(val);
+                    // Nested object, try to extract value from common property structures
+                    let value = val.value || val.Value || val.val ||
+                        val.nominalValue || val.NominalValue;
+
+                    // If still no value, try to stringify the object intelligently
+                    if (value === undefined || value === null) {
+                        // Check if it has a type and value field (common IFC structure)
+                        if (val.type && val.value !== undefined) {
+                            value = val.value;
+                        } else {
+                            // Last resort: JSON stringify
+                            value = JSON.stringify(val);
+                        }
+                    }
+
                     normalized[key] = value;
                 } else {
                     normalized[key] = val;
@@ -276,7 +296,7 @@ class AttributeMarkupTool {
             return objectProps.class;
         }
 
-        // Search in property sets
+        // Search in ALL property sets
         if (objectProps.properties) {
             for (const pset of objectProps.properties) {
                 if (!pset.properties) continue;
@@ -287,7 +307,7 @@ class AttributeMarkupTool {
                 // Try exact match first (case-insensitive)
                 for (const [key, value] of Object.entries(props)) {
                     if (key.toLowerCase() === nameLower) {
-                        this.log(`✓ Found exact match: "${key}" = "${value}"`);
+                        this.log(`✓ Found exact match in "${pset.name}": "${key}" = "${value}"`);
                         return this.formatValue(value);
                     }
                 }
@@ -296,14 +316,14 @@ class AttributeMarkupTool {
                 for (const [key, value] of Object.entries(props)) {
                     const keyLower = key.toLowerCase();
                     if (keyLower.includes(nameLower) || nameLower.includes(keyLower)) {
-                        this.log(`✓ Found partial match: "${key}" = "${value}"`);
+                        this.log(`✓ Found partial match in "${pset.name}": "${key}" = "${value}"`);
                         return this.formatValue(value);
                     }
                 }
             }
         }
 
-        this.log(`✗ Property "${propertyName}" not found`);
+        this.log(`✗ Property "${propertyName}" not found in any property set`);
         return null;
     }
 
