@@ -189,6 +189,9 @@ class AttributeMarkupTool {
     extractProperties(objectProps) {
         const lines = [];
 
+        // DEBUG: Log all available properties for this object
+        this.logAvailableProperties(objectProps);
+
         // Try to extract each requested property
         for (const propName of this.propertyNames) {
             const value = this.findPropertyValue(objectProps, propName);
@@ -203,6 +206,30 @@ class AttributeMarkupTool {
         }
 
         return lines.length > 0 ? lines.join('\\n') : 'No data';
+    }
+
+    logAvailableProperties(objectProps) {
+        // Log once per object to avoid spam
+        if (this.debuggedObject === objectProps.id) return;
+        this.debuggedObject = objectProps.id;
+
+        this.log(`🔍 Properties available for object ${objectProps.id}:`);
+        this.log(`  - class: ${objectProps.class}`);
+        this.log(`  - product.name: ${objectProps.product?.name}`);
+
+        if (objectProps.properties) {
+            objectProps.properties.forEach((pset, idx) => {
+                this.log(`  📦 PropertySet[${idx}]: "${pset.name}"`);
+                if (pset.properties) {
+                    Object.keys(pset.properties).forEach(key => {
+                        const value = pset.properties[key];
+                        this.log(`      - "${key}" = "${value}"`);
+                    });
+                }
+            });
+        } else {
+            this.log(`  ⚠️ No property sets found`);
+        }
     }
 
     findPropertyValue(objectProps, propertyName) {
@@ -221,22 +248,26 @@ class AttributeMarkupTool {
             for (const pset of objectProps.properties) {
                 if (!pset.properties) continue;
 
-                // Try exact match first
+                // Try exact match first (case-insensitive)
                 for (const [key, value] of Object.entries(pset.properties)) {
                     if (key.toLowerCase() === nameLower) {
+                        this.log(`✓ Found exact match: "${key}" = "${value}"`);
                         return this.formatValue(value);
                     }
                 }
 
-                // Try partial match (e.g., "Assembly" matches "AssemblyCode")
+                // Try contains match (property name contains search term or vice versa)
                 for (const [key, value] of Object.entries(pset.properties)) {
-                    if (key.toLowerCase().includes(nameLower) || nameLower.includes(key.toLowerCase())) {
+                    const keyLower = key.toLowerCase();
+                    if (keyLower.includes(nameLower) || nameLower.includes(keyLower)) {
+                        this.log(`✓ Found partial match: "${key}" = "${value}"`);
                         return this.formatValue(value);
                     }
                 }
             }
         }
 
+        this.log(`✗ Property "${propertyName}" not found`);
         return null;
     }
 
