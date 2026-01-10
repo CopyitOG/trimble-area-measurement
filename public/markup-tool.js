@@ -281,7 +281,19 @@ class AttributeMarkupTool {
         label.style.backgroundColor = this.settings.bgColor;
         label.style.color = this.settings.textColor;
 
-        document.body.appendChild(label);
+        // CRITICAL FIX: Append to parent window (viewer), not iframe
+        try {
+            if (window.parent && window.parent.document && window.parent.document.body) {
+                window.parent.document.body.appendChild(label);
+                this.log('✓ Label added to parent window (viewer)');
+            } else {
+                document.body.appendChild(label);
+                this.log('⚠ Label added to iframe (will not be visible in 3D)');
+            }
+        } catch (error) {
+            document.body.appendChild(label);
+            this.log(`❌ Error appending to parent: ${error.message}`);
+        }
 
         return label;
     }
@@ -306,8 +318,30 @@ class AttributeMarkupTool {
             // Get current camera state
             const camera = await this.api.viewer.getCamera();
 
+            // Debug log camera once
+            if (!this.cameraLogged) {
+                const camPos = camera.position || { x: 0, y: 0, z: 0 };
+                this.log(`📹 Camera: pos(${camPos.x.toFixed(1)}, ${camPos.y.toFixed(1)}, ${camPos.z.toFixed(1)}), FOV:${camera.fieldOfView}°`);
+                this.cameraLogged = true;
+            }
+
+            let index = 0;
             this.labels.forEach((labelData, id) => {
-                const screenPos = this.worldToScreen(labelData.position, camera);
+                const worldPos = labelData.position;
+
+                // Debug log first label's world position once
+                if (index === 0 && !this.worldPosLogged) {
+                    this.log(`🎯 Label world pos: (${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)}, ${worldPos.z.toFixed(2)})`);
+                    this.worldPosLogged = true;
+                }
+
+                const screenPos = this.worldToScreen(worldPos, camera);
+
+                // Debug log first label's screen position once
+                if (index === 0 && !this.screenPosLogged && screenPos) {
+                    this.log(`📺 Label screen pos: (${screenPos.x.toFixed(0)}, ${screenPos.y.toFixed(0)}), visible:${screenPos.visible}`);
+                    this.screenPosLogged = true;
+                }
 
                 if (screenPos && screenPos.visible) {
                     labelData.element.style.left = `${screenPos.x}px`;
@@ -317,9 +351,14 @@ class AttributeMarkupTool {
                     // Hide if behind camera or out of view
                     labelData.element.style.display = 'none';
                 }
+
+                index++;
             });
         } catch (error) {
-            // Silently fail - camera might not be ready yet
+            if (!this.errorLogged) {
+                this.log(`❌ Camera update error: ${error.message}`);
+                this.errorLogged = true;
+            }
         }
     }
 
