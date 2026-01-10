@@ -257,10 +257,10 @@
                 log(`[BBox] Min: (${bbox.min.x}, ${bbox.min.y}, ${bbox.min.z})`);
                 log(`[BBox] Max: (${bbox.max.x}, ${bbox.max.y}, ${bbox.max.z})`);
 
-                // Calculate dimensions (in meters, bbox is in mm)
-                const width = Math.abs(bbox.max.x - bbox.min.x) / 1000;
-                const height = Math.abs(bbox.max.y - bbox.min.y) / 1000;
-                const depth = Math.abs(bbox.max.z - bbox.min.z) / 1000;
+                // Calculate dimensions (bbox values are already in meters)
+                const width = Math.abs(bbox.max.x - bbox.min.x);
+                const height = Math.abs(bbox.max.y - bbox.min.y);
+                const depth = Math.abs(bbox.max.z - bbox.min.z);
 
                 log(`[Dims] W:${width.toFixed(2)}m H:${height.toFixed(2)}m D:${depth.toFixed(2)}m`);
                 dimensionsSpan.textContent = `${width.toFixed(2)} × ${height.toFixed(2)} × ${depth.toFixed(2)} m`;
