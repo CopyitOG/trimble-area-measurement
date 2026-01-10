@@ -13,51 +13,55 @@
         <header>
             <h1>🏷️ Attribute Markup</h1>
             <p class="subtitle">Display custom property labels on selected elements</p>
+            <p class="version">v2.1.0</p>
         </header>
 
         <div id="status" class="status info">
             Connecting to Trimble Connect...
         </div>
 
-        <!-- Property Selector -->
+        <!-- Custom Properties Input -->
         <section class="panel">
-            <h2>Select Properties to Display</h2>
-            <div class="property-list">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="prop-name" value="name" checked>
-                    <span>Element Name</span>
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="prop-type" value="class">
-                    <span>Element Type</span>
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="prop-material" value="material">
-                    <span>Material</span>
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="prop-dimensions" value="dimensions">
-                    <span>Dimensions</span>
-                </label>
-            </div>
+            <h2>Properties to Display</h2>
+            <p class="hint">Enter property names separated by commas</p>
+            <textarea id="property-names"
+                placeholder="Examples:&#10;Name, Type&#10;AssemblyCode, Weight&#10;Material, Manufacturer"
+                rows="4">Name, Type</textarea>
+            <p class="hint-small">💡 Common properties: Name, Type, Material, Width, Height, Length, Weight,
+                AssemblyCode, Manufacturer</p>
         </section>
 
         <!-- Actions -->
         <section class="actions">
-            <button id="apply-btn" class="btn btn-primary" disabled>
-                Create Labels in 3D
+            <button id="apply-btn" class="btn btn-primary">
+                Create Labels for Selected
             </button>
             <button id="clear-btn" class="btn btn-secondary">
                 Clear All Labels
             </button>
         </section>
 
-        <!-- Selected Elements -->
-        <section class="panel">
-            <h2>Selected Elements (<span id="selected-count">0</span>)</h2>
-            <div id="selected-list" class="selected-list">
-                <p class="placeholder">Click on elements in the 3D view to select them</p>
+        <!-- Selected Elements Info -->
+        <section class="panel info-panel">
+            <div class="info-row">
+                <span class="info-label">Selected Elements:</span>
+                <span id="selected-count" class="info-value">0</span>
             </div>
+            <div class="info-row">
+                <span class="info-label">Labels Created:</span>
+                <span id="labels-count" class="info-value">0</span>
+            </div>
+        </section>
+
+        <!-- Instructions -->
+        <section class="panel instructions">
+            <h3>How to Use</h3>
+            <ol>
+                <li>Select elements in the 3D view (click or drag to select multiple)</li>
+                <li>Enter property names you want to display</li>
+                <li>Click "Create Labels for Selected"</li>
+                <li>Labels appear in 3D view pointing to elements</li>
+            </ol>
         </section>
 
         <!-- Debug Log -->
