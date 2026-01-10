@@ -8,7 +8,7 @@ class AttributeMarkupTool {
         this.markupIds = []; // Track created markup IDs
         this.propertyNames = ['Name', 'Type']; // Default properties
 
-        this.version = '2.1.0';
+        this.version = '2.1.1';
         this.init();
     }
 
@@ -248,8 +248,11 @@ class AttributeMarkupTool {
             for (const pset of objectProps.properties) {
                 if (!pset.properties) continue;
 
+                // Normalize the properties structure
+                const props = this.normalizeProperties(pset.properties);
+
                 // Try exact match first (case-insensitive)
-                for (const [key, value] of Object.entries(pset.properties)) {
+                for (const [key, value] of Object.entries(props)) {
                     if (key.toLowerCase() === nameLower) {
                         this.log(`✓ Found exact match: "${key}" = "${value}"`);
                         return this.formatValue(value);
@@ -257,7 +260,7 @@ class AttributeMarkupTool {
                 }
 
                 // Try contains match (property name contains search term or vice versa)
-                for (const [key, value] of Object.entries(pset.properties)) {
+                for (const [key, value] of Object.entries(props)) {
                     const keyLower = key.toLowerCase();
                     if (keyLower.includes(nameLower) || nameLower.includes(keyLower)) {
                         this.log(`✓ Found partial match: "${key}" = "${value}"`);
