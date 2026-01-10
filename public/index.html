@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Surface Area Measurement</title>
+    <title>Face Area Measurement</title>
     <style>
         * {
             margin: 0;
@@ -88,8 +88,22 @@
             display: block;
         }
 
+        .face-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+
+        .face-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
         .area-label {
-            font-size: 12px;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 1px;
             opacity: 0.9;
@@ -158,7 +172,7 @@
     <div class="container">
         <h1>
             <div class="icon">📐</div>
-            Area Measurement
+            Face Area
         </h1>
 
         <div id="status" class="status info">
@@ -166,6 +180,8 @@
         </div>
 
         <div id="measurement-card" class="measurement-card">
+            <div class="face-label">Face Detected</div>
+            <div class="face-name" id="face-name">--</div>
             <div class="area-label">Surface Area</div>
             <div class="area-value" id="area-value">0.00</div>
             <div class="area-unit">m²</div>
@@ -173,16 +189,16 @@
 
         <div id="object-info" class="object-info">
             <div class="info-row">
-                <span class="info-label">Object Class:</span>
-                <span class="info-value" id="object-class">--</span>
+                <span class="info-label">Normal Vector:</span>
+                <span class="info-value" id="normal-vec">--</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Dimensions:</span>
+                <span class="info-value" id="dimensions">--</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Object ID:</span>
                 <span class="info-value" id="object-id">--</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Model ID:</span>
-                <span class="info-value" id="model-id">--</span>
             </div>
         </div>
 
@@ -198,151 +214,101 @@
             logDiv.textContent = `[${time}] ${msg}\n` + logDiv.textContent;
         }
 
-        log('[v6] Fixed API usage with modelId');
+        log('[v7] Face Area - Plan C Implementation');
 
         let API = null;
         const statusDiv = document.getElementById('status');
         const measurementCard = document.getElementById('measurement-card');
         const areaValue = document.getElementById('area-value');
+        const faceNameSpan = document.getElementById('face-name');
         const objectInfo = document.getElementById('object-info');
-        const objectClassSpan = document.getElementById('object-class');
+        const normalVecSpan = document.getElementById('normal-vec');
+        const dimensionsSpan = document.getElementById('dimensions');
         const objectIdSpan = document.getElementById('object-id');
-        const modelIdSpan = document.getElementById('model-id');
 
         function updateStatus(message, type) {
             statusDiv.className = 'status ' + type;
             statusDiv.textContent = message;
         }
 
-        async function calculateArea(pickData) {
-            const pos = pickData.position;
-            const objRuntimeId = pickData.objectRuntimeId;
-            const modelId = pickData.modelId;
+        async function calculateFaceArea(pickData) {
+            const { position, normal, objectRuntimeId, modelId } = pickData;
 
-            log(`[Pick] Object: ${objRuntimeId}, Model: ${modelId}`);
+            log(`[Click] Object: ${objectRuntimeId}, Model: ${modelId}`);
+            log(`[Normal] x:${normal.x.toFixed(3)}, y:${normal.y.toFixed(3)}, z:${normal.z.toFixed(3)}`);
 
-            // Display basic info
-            objectIdSpan.textContent = objRuntimeId || 'N/A';
-            modelIdSpan.textContent = modelId || 'N/A';
+            // Display object info
+            objectIdSpan.textContent = objectRuntimeId || 'N/A';
+            normalVecSpan.textContent = `(${normal.x.toFixed(2)}, ${normal.y.toFixed(2)}, ${normal.z.toFixed(2)})`;
             objectInfo.classList.add('visible');
 
             try {
-                // ✅ CORRECT API USAGE: getObjectProperties(modelId, [objectRuntimeIds])
-                log('[API] Calling getObjectProperties with modelId');
-                const props = await API.viewer.getObjectProperties(modelId, [objRuntimeId]);
+                // Get bounding box
+                log('[API] Getting bounding box...');
+                const bboxes = await API.viewer.getObjectBoundingBoxes(modelId, [objectRuntimeId]);
 
-                log('[Props] Result length: ' + props.length);
-
-                if (props && props.length > 0) {
-                    const obj = props[0];
-                    log('[Props] Object class: ' + (obj.class || 'N/A'));
-                    log('[Props] Has properties: ' + (obj.properties ? 'YES' : 'NO'));
-
-                    objectClassSpan.textContent = obj.class || 'N/A';
-
-                    // Search for area in PropertySets
-                    if (obj.properties && obj.properties.length > 0) {
-                        log('[Props] PropertySets count: ' + obj.properties.length);
-
-                        let foundArea = false;
-
-                        // Look through all property sets
-                        for (let pset of obj.properties) {
-                            log('[PSet] Set: ' + (pset.set || 'unnamed'));
-
-                            if (pset.properties && pset.properties.length > 0) {
-                                for (let prop of pset.properties) {
-                                    log('[Prop] ' + prop.name + ' = ' + prop.value + ' (type: ' + prop.type + ')');
-
-                                    // PropertyType.AreaMeasure = 1
-                                    if (prop.type === 1) {
-                                        log('[AREA] Found area property: ' + prop.value + ' m²');
-                                        displayArea(prop.value);
-                                        foundArea = true;
-                                        break;
-                                    }
-
-                                    // Also check by name
-                                    if (!foundArea && prop.name && prop.name.toLowerCase().includes('area')) {
-                                        log('[AREA] Found by name: ' + prop.value);
-                                        displayArea(prop.value);
-                                        foundArea = true;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if (foundArea) break;
-                        }
-
-                        if (!foundArea) {
-                            log('[Info] No area property found, estimating...');
-                            estimateArea(modelId, objRuntimeId);
-                        }
-                    } else {
-                        log('[Info] No properties available, estimating...');
-                        estimateArea(modelId, objRuntimeId);
-                    }
-                } else {
-                    log('[Props] ✗ Empty result');
-                    estimateArea(modelId, objRuntimeId);
+                if (!bboxes || bboxes.length === 0) {
+                    log('[Error] No bounding box found');
+                    updateStatus('Could not get object dimensions', 'warning');
+                    return;
                 }
+
+                const bbox = bboxes[0].boundingBox;
+                log(`[BBox] Min: (${bbox.min.x}, ${bbox.min.y}, ${bbox.min.z})`);
+                log(`[BBox] Max: (${bbox.max.x}, ${bbox.max.y}, ${bbox.max.z})`);
+
+                // Calculate dimensions (in meters, bbox is in mm)
+                const width = Math.abs(bbox.max.x - bbox.min.x) / 1000;
+                const height = Math.abs(bbox.max.y - bbox.min.y) / 1000;
+                const depth = Math.abs(bbox.max.z - bbox.min.z) / 1000;
+
+                log(`[Dims] W:${width.toFixed(2)}m H:${height.toFixed(2)}m D:${depth.toFixed(2)}m`);
+                dimensionsSpan.textContent = `${width.toFixed(2)} × ${height.toFixed(2)} × ${depth.toFixed(2)} m`;
+
+                // Determine which face based on normal vector
+                const absNormal = {
+                    x: Math.abs(normal.x),
+                    y: Math.abs(normal.y),
+                    z: Math.abs(normal.z)
+                };
+
+                let faceArea;
+                let faceName;
+
+                if (absNormal.z > absNormal.x && absNormal.z > absNormal.y) {
+                    // Top or bottom face (XY plane)
+                    faceArea = width * height;
+                    faceName = normal.z > 0 ? "Top Face" : "Bottom Face";
+                } else if (absNormal.x > absNormal.y) {
+                    // Left or right face (YZ plane)
+                    faceArea = height * depth;
+                    faceName = normal.x > 0 ? "Right Face" : "Left Face";
+                } else {
+                    // Front or back face (XZ plane)
+                    faceArea = width * depth;
+                    faceName = normal.y > 0 ? "Front Face" : "Back Face";
+                }
+
+                log(`[Result] ${faceName}: ${faceArea.toFixed(2)} m²`);
+
+                // Display results
+                faceNameSpan.textContent = faceName;
+                areaValue.textContent = faceArea.toFixed(2);
+                measurementCard.classList.add('visible');
+                updateStatus('Face area calculated!', 'success');
 
             } catch (error) {
                 log(`[Error] ${error.message}`);
-                estimateArea(modelId, objRuntimeId);
+                updateStatus('Error calculating face area', 'warning');
             }
-        }
-
-        async function estimateArea(modelId, objRuntimeId) {
-            try {
-                // Try getBoundingBox for estimation
-                log('[BBox] Trying getBoundingBox...');
-                const bboxes = await API.viewer.getObjectBoundingBoxes(modelId, [objRuntimeId]);
-
-                if (bboxes && bboxes.length > 0) {
-                    const bbox = bboxes[0].boundingBox;
-                    const width = Math.abs(bbox.max.x - bbox.min.x);
-                    const height = Math.abs(bbox.max.y - bbox.min.y);
-                    const depth = Math.abs(bbox.max.z - bbox.min.z);
-
-                    log(`[BBox] Dims: ${width.toFixed(2)} x ${height.toFixed(2)} x ${depth.toFixed(2)} m`);
-
-                    // Estimate largest face
-                    const areas = [width * height, width * depth, height * depth];
-                    const maxArea = Math.max(...areas);
-
-                    log(`[BBox] Estimated area: ${maxArea.toFixed(2)} m²`);
-                    displayArea(maxArea);
-                } else {
-                    log('[Fallback] Using 1.0 m²');
-                    displayArea(1.0);
-                }
-            } catch (err) {
-                log(`[Error] ${err.message}`);
-                displayArea(1.0);
-            }
-        }
-
-        function displayArea(area) {
-            let areaM2 = parseFloat(area);
-
-            // Convert if needed (if value seems to be in mm²)
-            if (areaM2 > 1000000) {
-                areaM2 = areaM2 / 1000000;
-                log('[Convert] mm² to m²');
-            }
-
-            areaValue.textContent = areaM2.toFixed(2);
-            measurementCard.classList.add('visible');
         }
 
         function handleEvent(event, data) {
             const eventData = data && data.data ? data.data : data;
 
             if (event === 'viewer.onPicked' && eventData && eventData.position) {
-                log('[Pick] Surface clicked');
-                calculateArea(eventData);
+                log('[Event] Surface clicked!');
+                calculateFaceArea(eventData);
             }
         }
 
@@ -352,7 +318,7 @@
                 API = await TrimbleConnectWorkspace.connect(window.parent, handleEvent);
 
                 log('[API] ✓ Connected!');
-                updateStatus('Ready! Click on surfaces to measure area', 'success');
+                updateStatus('Ready! Click on any surface to measure face area', 'success');
 
             } catch (error) {
                 log(`[API] ERROR: ${error.message}`);
