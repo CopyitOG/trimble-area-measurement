@@ -5,70 +5,89 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attribute Markup</title>
+    <!-- Trimble Modus Bootstrap 2.x CDN -->
+    <link rel="stylesheet" href="https://modus.trimble.com/css/modus-2.3.0.min.css">
+    <!-- Open Sans Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
     <div class="container">
-        <header>
-            <h1>🏷️ Attribute Markup</h1>
-            <p class="subtitle">Display custom property labels on selected elements</p>
-            <p class="version">v2.1.3</p>
+        <!-- Header with TAG logo -->
+        <header class="mb-3">
+            <h1 class="h4 mb-2">
+                <span class="badge bg-primary me-2">TAG</span>
+                Attribute Markup
+            </h1>
+            <p class="text-muted small mb-1">Display custom property labels on selected elements</p>
+            <p class="text-muted" style="font-size: 11px; font-family: monospace;">v2.1.3</p>
         </header>
 
-        <div id="status" class="status info">
+        <!-- Status Alert -->
+        <div id="status" class="alert alert-info mb-3" role="alert">
             Connecting to Trimble Connect...
         </div>
 
-        <!-- Custom Properties Input -->
-        <section class="panel">
-            <h2>Properties to Display</h2>
-            <p class="hint">Enter property names separated by commas</p>
-            <textarea id="property-names"
-                placeholder="Examples:&#10;Name, Type&#10;AssemblyCode, Weight&#10;Material, Manufacturer"
-                rows="4">Name, Type</textarea>
-            <p class="hint-small">💡 <strong>Core IFC:</strong> Name, Description, Tag, ObjectType<br>
-                <strong>Common properties:</strong> Material, Width, Height, Length, Weight, AssemblyCode, Manufacturer
-            </p>
-        </section>
+        <!-- Properties Input Section -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h6 mb-2">Properties to Display</h2>
+                <p class="text-muted small mb-2">Enter property names separated by commas</p>
+                <textarea id="property-names" class="form-control mb-2"
+                    placeholder="Examples:&#10;Name, Type&#10;AssemblyCode, Weight&#10;Material, Manufacturer"
+                    rows="4">Name, Type</textarea>
+                <p class="text-muted" style="font-size: 12px;">
+                    💡 <strong>Core IFC:</strong> Name, Description, Tag, ObjectType<br>
+                    <strong>Common properties:</strong> Material, Width, Height, Length, Weight, AssemblyCode,
+                    Manufacturer
+                </p>
+            </div>
+        </div>
 
-        <!-- Actions -->
-        <section class="actions">
-            <button id="apply-btn" class="btn btn-primary">
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2 mb-3 flex-wrap">
+            <button id="apply-btn" class="btn btn-primary flex-fill">
                 Create Labels for Selected
             </button>
-            <button id="clear-btn" class="btn btn-secondary">
+            <button id="clear-btn" class="btn btn-outline-secondary flex-fill">
                 Clear All Labels
             </button>
-        </section>
+        </div>
 
         <!-- Selected Elements Info -->
-        <section class="panel info-panel">
-            <div class="info-row">
-                <span class="info-label">Selected Elements:</span>
-                <span id="selected-count" class="info-value">0</span>
+        <div class="card mb-3 border-success">
+            <div class="card-body" style="background-color: #e8f5e9;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small">Selected Elements:</span>
+                    <span id="selected-count" class="fw-bold text-success">0</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted small">Labels Created:</span>
+                    <span id="labels-count" class="fw-bold text-success">0</span>
+                </div>
             </div>
-            <div class="info-row">
-                <span class="info-label">Labels Created:</span>
-                <span id="labels-count" class="info-value">0</span>
-            </div>
-        </section>
+        </div>
 
         <!-- Instructions -->
-        <section class="panel instructions">
-            <h3>How to Use</h3>
-            <ol>
-                <li>Select elements in the 3D view (click or drag to select multiple)</li>
-                <li>Enter property names you want to display</li>
-                <li>Click "Create Labels for Selected"</li>
-                <li>Labels appear in 3D view pointing to elements</li>
-            </ol>
-        </section>
+        <div class="card mb-3">
+            <div class="card-body">
+                <h3 class="h6 mb-2">How to Use</h3>
+                <ol class="small text-muted mb-0" style="line-height: 1.7;">
+                    <li>Select elements in the 3D view (click or drag to select multiple)</li>
+                    <li>Enter property names you want to display</li>
+                    <li>Click "Create Labels for Selected"</li>
+                    <li>Labels appear in 3D view pointing to elements</li>
+                </ol>
+            </div>
+        </div>
 
         <!-- Debug Log -->
-        <details class="debug-section">
-            <summary>Debug Log</summary>
-            <div id="log" class="log"></div>
+        <details class="mb-3">
+            <summary class="btn btn-sm btn-outline-secondary w-100 text-start">Debug Log</summary>
+            <div id="log" class="log mt-2"></div>
         </details>
     </div>
 
