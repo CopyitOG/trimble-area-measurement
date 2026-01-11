@@ -27,6 +27,12 @@
     box-sizing: border-box;
 }
 
+html,
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
 body {
     font-family: 'Open Sans', sans-serif;
     background-color: var(--trimble-gray-0);
@@ -42,6 +48,7 @@ body {
     max-width: 100%;
     min-width: 320px;
     box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 /* Typography - Open Sans */
@@ -61,6 +68,29 @@ h6 {
 .card,
 .alert {
     font-family: 'Open Sans', sans-serif;
+}
+
+/* Button Styling - Explicit Trimble Blue for btn-primary */
+.btn-primary {
+    background-color: var(--trimble-blue) !important;
+    border-color: var(--trimble-blue) !important;
+    color: #ffffff !important;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: #004d82 !important;
+    border-color: #004d82 !important;
+}
+
+.btn-primary:active {
+    background-color: #003d66 !important;
+    border-color: #003d66 !important;
+}
+
+.btn-primary:disabled {
+    background-color: #7ca9c7 !important;
+    border-color: #7ca9c7 !important;
+    opacity: 0.6;
 }
 
 /* Remove custom button styles - Modus handles this */
@@ -177,8 +207,15 @@ details summary::-webkit-details-marker {
 /* Responsive Design - No horizontal scrolling at 320px */
 @media (max-width: 400px) {
     .container {
-        padding: var(--spacing-2);
-        /* 16px */
+        padding: var(--spacing-1);
+        /* 8px for very narrow panels */
+        max-width: 100%;
+    }
+
+    /* Reduce card padding */
+    .card-body {
+        padding: var(--spacing-1) !important;
+        /* 8px */
     }
 
     /* Ensure all text wraps properly */
@@ -194,10 +231,38 @@ details summary::-webkit-details-marker {
         flex-wrap: wrap;
     }
 
-    /* Allow buttons to take full width when wrapped */
+    /* Allow buttons to stay side by side but smaller */
     .d-flex.flex-wrap .btn {
         min-width: calc(50% - 8px);
-        /* 50% minus half the gap */
+        font-size: 13px;
+        padding: 8px;
+    }
+
+    /* Make headers more compact */
+    h1,
+    .h4 {
+        font-size: 16px !important;
+    }
+
+    h2,
+    .h6 {
+        font-size: 14px !important;
+    }
+
+    /* Reduce margins */
+    .mb-3 {
+        margin-bottom: var(--spacing-1) !important;
+        /* 8px */
+    }
+
+    .mb-2 {
+        margin-bottom: 4px !important;
+    }
+
+    /* Smaller badge */
+    .badge {
+        font-size: 10px !important;
+        padding: 3px 6px !important;
     }
 }
 
@@ -210,6 +275,14 @@ details summary::-webkit-details-marker {
 textarea.form-control {
     resize: vertical;
     max-width: 100%;
+}
+
+/* Prevent any word from causing overflow */
+p,
+span,
+div {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 /* Small text helpers */
