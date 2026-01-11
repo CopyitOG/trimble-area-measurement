@@ -8,16 +8,36 @@ class AttributeMarkupTool {
         this.markupIds = []; // Track created markup IDs
         this.propertyNames = ['Name', 'Type']; // Default properties
 
-        // Property name aliases - map Trimble UI names to actual API names
-        this.propertyAliases = {
-            'product description': ['Name', 'Description', 'ObjectType'],
-            'file name': ['FileName', 'File'],
-            'guid': ['GlobalId', 'GUID', 'G-UID (IFC)'],
-            'load bearing': ['LoadBearing', 'IsLoadBearing'],
-            'element name': ['Name', 'ObjectType'],
-            'element type': ['ObjectType', 'Type', 'PredefinedType']
+        // IFC Schema-Aware Core Attribute Mappings
+        // These map to IfcRoot schema attributes (indices 3, 4, 5, 8 in IFC EXPRESS)
+        this.ifcCoreAttributes = {
+            // Index 3: GlobalId
+            'globalid': ['GlobalId', 'GUID', 'G-UID (IFC)', 'GlobalID', 'Guid'],
+            'guid': ['GlobalId', 'GUID', 'G-UID (IFC)', 'GlobalID', 'Guid'],
+
+            // Index 4: OwnerHistory (skip - complex object)
+
+            // Index 5: Name
+            'name': ['Name', 'ifcName', 'Product Name', 'Element Name', 'ObjectName'],
+
+            // Index 6: Description  
+            'description': ['Description', 'ifcDescription', 'Product Description', 'ObjectDescription'],
+
+            // Index 7: ObjectType (for typed objects)
+            'objecttype': ['ObjectType', 'ifcObjectType', 'Type', 'ElementType'],
+
+            // Index 8: Tag (common for identification)
+            'tag': ['Tag', 'ifcTag', 'Mark', 'Reference', 'Identifier']
         };
 
+        // Extended property aliases for common Trimble Connect UI names
+        this.propertyAliases = {
+            'product description': ['Description', 'Name', 'ifcDescription', 'ObjectType'],
+            'file name': ['FileName', 'File', 'OriginalFileName'],
+            'load bearing': ['LoadBearing', 'IsLoadBearing', 'Structural'],
+            'element name': ['Name', 'ifcName', 'Product Name'],
+            'element type': ['ObjectType', 'Type', 'PredefinedType', 'ifcObjectType']
+        };
         this.version = '2.1.3';
         this.init();
     }
@@ -299,15 +319,21 @@ class AttributeMarkupTool {
         const nameLower = propertyName.toLowerCase();
         const nameNoSpaces = propertyName.replace(/\s+/g, '').toLowerCase();
 
-        // Check direct properties first
-        if (nameLower === 'name') {
-            return objectProps.product?.name || objectProps.class;
-        }
-        if (nameLower === 'type' || nameLower === 'class') {
-            return objectProps.class;
+        // STEP 1: Check if this is a core IFC attribute (schema-aware)
+        if (this.ifcCoreAttributes[nameLower] || this.ifcCoreAttributes[nameNoSpaces]) {
+            const coreAttrResult = this.findCoreIfcAttribute(objectProps, propertyName);
+            if (coreAttrResult !== null) {
+                return coreAttrResult;
+            }
         }
 
-        // Check if there's an alias for this property name
+        // STEP 2: Check Product object for direct attributes
+        const productResult = this.findInProductObject(objectProps, propertyName);
+        if (productResult !== null) {
+            return productResult;
+        }
+
+        // STEP 3: Build search list with aliases
         const searchNames = [propertyName];
         if (this.propertyAliases && this.propertyAliases[nameLower]) {
             searchNames.push(...this.propertyAliases[nameLower]);
@@ -323,6 +349,83 @@ class AttributeMarkupTool {
         }
 
         this.log(`✗ Property "${propertyName}" not found in any property set`);
+        return null;
+    }
+
+    /**
+     * Find core IFC attributes (Name, Description, Tag, ObjectType)
+     * These are from IfcRoot schema and may be stored differently
+     */
+    findCoreIfcAttribute(objectProps, propertyName) {
+        const nameLower = propertyName.toLowerCase();
+        const nameNoSpaces = propertyName.replace(/\s+/g, '').toLowerCase();
+
+        // Get all possible attribute names
+        const attributeVariations = this.ifcCoreAttributes[nameLower] || this.ifcCoreAttributes[nameNoSpaces] || [];
+
+        this.log(`🏛️ Checking core IFC attributes for "${propertyName}": ${attributeVariations.join(', ')}`);
+
+        // Check in Product object first
+        if (objectProps.product) {
+            for (const attrName of attributeVariations) {
+                const attrLower = attrName.toLowerCase();
+                const value = objectProps.product[attrName] || objectProps.product[attrLower];
+                if (value) {
+                    this.log(`✓ Found in Product object: "${attrName}" = "${value}"`);
+                    return this.formatValue(value);
+                }
+            }
+        }
+
+        // Check in properties with null/empty pset (core IFC attributes often have no pset)
+        if (objectProps.properties) {
+            for (const pset of objectProps.properties) {
+                if (!pset.name || pset.name === '' || pset.name === 'Product' || pset.name === 'System') {
+                    const props = this.normalizeProperties(pset.properties);
+
+                    for (const attrName of attributeVariations) {
+                        const value = props[attrName];
+                        if (value) {
+                            this.log(`✓ Found core attribute in "${pset.name || 'null pset'}": "${attrName}" = "${value}"`);
+                            return this.formatValue(value);
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Search in the Product object for direct properties
+     */
+    findInProductObject(objectProps, propertyName) {
+        if (!objectProps.product) return null;
+
+        const nameLower = propertyName.toLowerCase();
+        const product = objectProps.product;
+
+        // Try direct property access
+        const directValue = product[propertyName] || product[nameLower];
+        if (directValue) {
+            this.log(`✓ Found in Product.${propertyName}: "${directValue}"`);
+            return this.formatValue(directValue);
+        }
+
+        // Try common product properties
+        const productProps = {
+            'name': product.name,
+            'description': product.description,
+            'objecttype': product.objectType || product.ObjectType,
+            'type': product.type || product.Type
+        };
+
+        if (productProps[nameLower]) {
+            this.log(`✓ Found in Product.${nameLower}: "${productProps[nameLower]}"`);
+            return this.formatValue(productProps[nameLower]);
+        }
+
         return null;
     }
 
