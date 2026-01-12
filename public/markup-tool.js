@@ -7,6 +7,8 @@ class AttributeMarkupTool {
         this.api = null;
         this.markupIds = []; // Track created text markup IDs
         this.pointMarkupIds = []; // Track created point markup IDs
+        this.lineMarkupIds = []; // Track created line markup IDs
+        this.measurementMarkupIds = []; // Track created measurement markup IDs
         this.propertyNames = ['Name', 'Type']; // Default properties
 
         // IFC Schema-Aware Core Attribute Mappings
@@ -62,9 +64,11 @@ class AttributeMarkupTool {
         document.getElementById('apply-btn').addEventListener('click', () => this.applyLabels());
         document.getElementById('clear-btn').addEventListener('click', () => this.clearAllLabels());
 
-        // Point measurement buttons
-        document.getElementById('top-mark-btn').addEventListener('click', () => this.markTopPoint());
-        document.getElementById('bottom-mark-btn').addEventListener('click', () => this.markBottomPoint());
+        // Bounding box buttons
+        document.getElementById('z-max-btn').addEventListener('click', () => this.markZMax());
+        document.getElementById('z-min-btn').addEventListener('click', () => this.markZMin());
+        document.getElementById('dimensions-btn').addEventListener('click', () => this.showDimensions());
+        document.getElementById('box-btn').addEventListener('click', () => this.showBoundingBox());
 
         this.log('UI event listeners attached');
     }
@@ -510,15 +514,37 @@ class AttributeMarkupTool {
                 this.log(`Error removing point markups: ${error.message}`);
             }
         }
+
+        // Clear line markups (bounding boxes)
+        if (this.lineMarkupIds.length > 0) {
+            try {
+                await this.api.markup.removeMarkups(this.lineMarkupIds);
+                this.log(`🗑️ Removed ${this.lineMarkupIds.length} line markups`);
+                this.lineMarkupIds = [];
+            } catch (error) {
+                this.log(`Error removing line markups: ${error.message}`);
+            }
+        }
+
+        // Clear measurement markups (dimensions)
+        if (this.measurementMarkupIds.length > 0) {
+            try {
+                await this.api.markup.removeMarkups(this.measurementMarkupIds);
+                this.log(`🗑️ Removed ${this.measurementMarkupIds.length} dimension markups`);
+                this.measurementMarkupIds = [];
+            } catch (error) {
+                this.log(`Error removing dimension markups: ${error.message}`);
+            }
+        }
     }
 
     async clearAllLabels() {
         await this.clearMarkupsOnly();
-        this.log('All labels and point marks cleared');
-        this.updateStatus('Labels cleared', 'info');
+        this.log('All markups cleared');
+        this.updateStatus('All markups cleared', 'info');
     }
 
-    async markTopPoint() {
+    async markZMax() {
         try {
             this.log('📍 Creating top point mark...');
             const selection = await this.api.viewer.getSelection();
@@ -563,7 +589,7 @@ class AttributeMarkupTool {
         }
     }
 
-    async markBottomPoint() {
+    async markZMin() {
         try {
             this.log('📍 Creating bottom point mark...');
             const selection = await this.api.viewer.getSelection();
@@ -604,6 +630,230 @@ class AttributeMarkupTool {
 
         } catch (error) {
             this.log(`❌ Error creating bottom mark: ${error.message}`);
+            this.updateStatus(`Error: ${error.message}`, 'warning');
+        }
+    }
+
+    async showDimensions() {
+        try {
+            this.log('📏 Creating bounding box dimensions...');
+            const selection = await this.api.viewer.getSelection();
+
+            if (!selection || selection.length === 0) {
+                this.updateStatus('⚠️ No elements selected', 'warning');
+                return;
+            }
+
+            const measurements = [];
+
+            for (const modelSelection of selection) {
+                const modelId = modelSelection.modelId;
+                const objectIds = modelSelection.objectRuntimeIds;
+
+                const bboxes = await this.api.viewer.getObjectBoundingBoxes(modelId, objectIds);
+
+                for (const bboxData of bboxes) {
+                    const bbox = bboxData.boundingBox;
+                    const objectId = bboxData.objectRuntimeId;
+
+                    // Calculate center points for dimension lines
+                    const centerX = (bbox.min.x + bbox.max.x) / 2 * 1000;
+                    const centerY = (bbox.min.y + bbox.max.y) / 2 * 1000;
+                    const centerZ = (bbox.min.z + bbox.max.z) / 2 * 1000;
+
+                    // Dimension 1: Length (X-axis) - along bottom front edge
+                    measurements.push({
+                        start: {
+                            positionX: bbox.min.x * 1000,
+                            positionY: bbox.min.y * 1000,
+                            positionZ: bbox.min.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        end: {
+                            positionX: bbox.max.x * 1000,
+                            positionY: bbox.min.y * 1000,
+                            positionZ: bbox.min.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        mainLineStart: {
+                            positionX: bbox.min.x * 1000,
+                            positionY: bbox.min.y * 1000,
+                            positionZ: bbox.min.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        mainLineEnd: {
+                            positionX: bbox.max.x * 1000,
+                            positionY: bbox.min.y * 1000,
+                            positionZ: bbox.min.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        color: { r: 0, g: 99, b: 163, a: 1 } // Trimble blue
+                    });
+
+                    // Dimension 2: Width (Y-axis) - along bottom left edge
+                    measurements.push({
+                        start: {
+                            positionX: bbox.min.x * 1000,
+                            positionY: bbox.min.y * 1000,
+                            positionZ: bbox.min.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        end: {
+                            positionX: bbox.min.x * 1000,
+                            positionY: bbox.max.y * 1000,
+                            positionZ: bbox.min.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        mainLineStart: {
+                            positionX: bbox.min.x * 1000,
+                            positionY: bbox.min.y * 1000,
+                            positionZ: bbox.min.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        mainLineEnd: {
+                            positionX: bbox.min.x * 1000,
+                            positionY: bbox.max.y * 1000,
+                            positionZ: bbox.min.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        color: { r: 0, g: 99, b: 163, a: 1 } // Trimble blue
+                    });
+
+                    // Dimension 3: Height (Z-axis) - along front left edge
+                    measurements.push({
+                        start: {
+                            positionX: bbox.min.x * 1000,
+                            positionY: bbox.min.y * 1000,
+                            positionZ: bbox.min.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        end: {
+                            positionX: bbox.min.x * 1000,
+                            positionY: bbox.min.y * 1000,
+                            positionZ: bbox.max.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        mainLineStart: {
+                            positionX: bbox.min.x * 1000,
+                            positionY: bbox.min.y * 1000,
+                            positionZ: bbox.min.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        mainLineEnd: {
+                            positionX: bbox.min.x * 1000,
+                            positionY: bbox.min.y * 1000,
+                            positionZ: bbox.max.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        color: { r: 0, g: 99, b: 163, a: 1 } // Trimble blue
+                    });
+                }
+            }
+
+            const result = await this.api.markup.addMeasurementMarkups(measurements);
+            this.measurementMarkupIds.push(...result.map(m => m.id));
+
+            const elementsCount = measurements.length / 3;
+            this.log(`✅ Created 3 dimension measurements for ${elementsCount} element(s)`);
+            this.updateStatus(`✅ Dimensions displayed for ${elementsCount} element(s)`, 'success');
+
+        } catch (error) {
+            this.log(`❌ Error creating dimensions: ${error.message}`);
+            this.updateStatus(`Error: ${error.message}`, 'warning');
+        }
+    }
+
+    async showBoundingBox() {
+        try {
+            this.log('📦 Creating bounding box wireframe...');
+            const selection = await this.api.viewer.getSelection();
+
+            if (!selection || selection.length === 0) {
+                this.updateStatus('⚠️ No elements selected', 'warning');
+                return;
+            }
+
+            const lineMarkups = [];
+
+            for (const modelSelection of selection) {
+                const modelId = modelSelection.modelId;
+                const objectIds = modelSelection.objectRuntimeIds;
+
+                const bboxes = await this.api.viewer.getObjectBoundingBoxes(modelId, objectIds);
+
+                for (const bboxData of bboxes) {
+                    const bbox = bboxData.boundingBox;
+                    const objectId = bboxData.objectRuntimeId;
+
+                    // Define 8 vertices of the bounding box (in mm)
+                    const vertices = [
+                        { x: bbox.min.x * 1000, y: bbox.min.y * 1000, z: bbox.min.z * 1000 }, // 0: bottom-front-left
+                        { x: bbox.max.x * 1000, y: bbox.min.y * 1000, z: bbox.min.z * 1000 }, // 1: bottom-front-right
+                        { x: bbox.max.x * 1000, y: bbox.max.y * 1000, z: bbox.min.z * 1000 }, // 2: bottom-back-right
+                        { x: bbox.min.x * 1000, y: bbox.max.y * 1000, z: bbox.min.z * 1000 }, // 3: bottom-back-left
+                        { x: bbox.min.x * 1000, y: bbox.min.y * 1000, z: bbox.max.z * 1000 }, // 4: top-front-left
+                        { x: bbox.max.x * 1000, y: bbox.min.y * 1000, z: bbox.max.z * 1000 }, // 5: top-front-right
+                        { x: bbox.max.x * 1000, y: bbox.max.y * 1000, z: bbox.max.z * 1000 }, // 6: top-back-right
+                        { x: bbox.min.x * 1000, y: bbox.max.y * 1000, z: bbox.max.z * 1000 }, // 7: top-back-left
+                    ];
+
+                    // Define 12 edges of the bounding box
+                    const edges = [
+                        // Bottom face (4 edges)
+                        [0, 1], [1, 2], [2, 3], [3, 0],
+                        // Top face (4 edges)
+                        [4, 5], [5, 6], [6, 7], [7, 4],
+                        // Vertical edges (4 edges)
+                        [0, 4], [1, 5], [2, 6], [3, 7]
+                    ];
+
+                    // Create line markup for each edge
+                    for (const [startIdx, endIdx] of edges) {
+                        const start = vertices[startIdx];
+                        const end = vertices[endIdx];
+
+                        lineMarkups.push({
+                            start: {
+                                positionX: start.x,
+                                positionY: start.y,
+                                positionZ: start.z,
+                                modelId: modelId,
+                                objectId: objectId
+                            },
+                            end: {
+                                positionX: end.x,
+                                positionY: end.y,
+                                positionZ: end.z,
+                                modelId: modelId,
+                                objectId: objectId
+                            },
+                            color: { r: 0, g: 99, b: 163, a: 1 } // Trimble blue
+                        });
+                    }
+                }
+            }
+
+            const result = await this.api.markup.addLineMarkups(lineMarkups);
+            this.lineMarkupIds.push(...result.map(m => m.id));
+
+            const boxCount = lineMarkups.length / 12;
+            this.log(`✅ Created ${boxCount} bounding box(es) with ${lineMarkups.length} lines`);
+            this.updateStatus(`✅ ${boxCount} bounding box(es) displayed`, 'success');
+
+        } catch (error) {
+            this.log(`❌ Error creating bounding box: ${error.message}`);
             this.updateStatus(`Error: ${error.message}`, 'warning');
         }
     }
