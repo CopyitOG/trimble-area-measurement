@@ -5,7 +5,8 @@
 class AttributeMarkupTool {
     constructor() {
         this.api = null;
-        this.markupIds = []; // Track created markup IDs
+        this.markupIds = []; // Track created text markup IDs
+        this.pointMarkupIds = []; // Track created point markup IDs
         this.propertyNames = ['Name', 'Type']; // Default properties
 
         // IFC Schema-Aware Core Attribute Mappings
@@ -60,6 +61,10 @@ class AttributeMarkupTool {
         // Action buttons
         document.getElementById('apply-btn').addEventListener('click', () => this.applyLabels());
         document.getElementById('clear-btn').addEventListener('click', () => this.clearAllLabels());
+
+        // Point measurement buttons
+        document.getElementById('top-mark-btn').addEventListener('click', () => this.markTopPoint());
+        document.getElementById('bottom-mark-btn').addEventListener('click', () => this.markBottomPoint());
 
         this.log('UI event listeners attached');
     }
@@ -487,19 +492,120 @@ class AttributeMarkupTool {
         if (this.markupIds.length > 0) {
             try {
                 await this.api.markup.removeMarkups(this.markupIds);
-                this.log(`🗑️ Removed ${this.markupIds.length} markups`);
+                this.log(`🗑️ Removed ${this.markupIds.length} text markups`);
                 this.markupIds = [];
                 document.getElementById('labels-count').textContent = '0';
             } catch (error) {
-                this.log(`Error removing markups: ${error.message}`);
+                this.log(`Error removing text markups: ${error.message}`);
+            }
+        }
+
+        // Also clear point markups
+        if (this.pointMarkupIds.length > 0) {
+            try {
+                await this.api.markup.removeMarkups(this.pointMarkupIds);
+                this.log(`🗑️ Removed ${this.pointMarkupIds.length} point markups`);
+                this.pointMarkupIds = [];
+            } catch (error) {
+                this.log(`Error removing point markups: ${error.message}`);
             }
         }
     }
 
     async clearAllLabels() {
         await this.clearMarkupsOnly();
-        this.log('All labels cleared');
+        this.log('All labels and point marks cleared');
         this.updateStatus('Labels cleared', 'info');
+    }
+
+    async markTopPoint() {
+        try {
+            this.log('📍 Creating top point mark...');
+            const selection = await this.api.viewer.getSelection();
+
+            if (!selection || selection.length === 0) {
+                this.updateStatus('⚠️ No elements selected', 'warning');
+                return;
+            }
+
+            const pointMarkups = [];
+
+            for (const modelSelection of selection) {
+                const modelId = modelSelection.modelId;
+                const objectIds = modelSelection.objectRuntimeIds;
+
+                const bboxes = await this.api.viewer.getObjectBoundingBoxes(modelId, objectIds);
+
+                for (const bboxData of bboxes) {
+                    const bbox = bboxData.boundingBox;
+                    // Top point = highest Z coordinate
+                    const topPoint = {
+                        positionX: (bbox.min.x + bbox.max.x) / 2 * 1000, // Convert to mm
+                        positionY: (bbox.min.y + bbox.max.y) / 2 * 1000,
+                        positionZ: bbox.max.z * 1000, // Highest Z
+                        modelId: modelId,
+                        objectId: bboxData.objectRuntimeId
+                    };
+
+                    pointMarkups.push({ start: topPoint });
+                }
+            }
+
+            const result = await this.api.markup.addSinglePointMarkups(pointMarkups);
+            this.pointMarkupIds.push(...result.map(m => m.id));
+
+            this.log(`✅ Created ${result.length} top point mark(s)`);
+            this.updateStatus(`✅ ${result.length} top mark(s) created`, 'success');
+
+        } catch (error) {
+            this.log(`❌ Error creating top mark: ${error.message}`);
+            this.updateStatus(`Error: ${error.message}`, 'warning');
+        }
+    }
+
+    async markBottomPoint() {
+        try {
+            this.log('📍 Creating bottom point mark...');
+            const selection = await this.api.viewer.getSelection();
+
+            if (!selection || selection.length === 0) {
+                this.updateStatus('⚠️ No elements selected', 'warning');
+                return;
+            }
+
+            const pointMarkups = [];
+
+            for (const modelSelection of selection) {
+                const modelId = modelSelection.modelId;
+                const objectIds = modelSelection.objectRuntimeIds;
+
+                const bboxes = await this.api.viewer.getObjectBoundingBoxes(modelId, objectIds);
+
+                for (const bboxData of bboxes) {
+                    const bbox = bboxData.boundingBox;
+                    // Bottom point = lowest Z coordinate
+                    const bottomPoint = {
+                        positionX: (bbox.min.x + bbox.max.x) / 2 * 1000, // Convert to mm
+                        positionY: (bbox.min.y + bbox.max.y) / 2 * 1000,
+                        positionZ: bbox.min.z * 1000, // Lowest Z
+                        modelId: modelId,
+                        objectId: bboxData.objectRuntimeId
+                    };
+
+                    pointMarkups.push({ start: bottomPoint });
+                }
+            }
+
+            const result = await this.api.markup.addSinglePointMarkups(pointMarkups);
+            this.pointMarkupIds.push(...result.map(m => m.id));
+
+            this.log(`✅ Created ${result.length} bottom point mark(s)`);
+            this.updateStatus(`✅ ${result.length} bottom mark(s) created`, 'success');
+
+        } catch (error) {
+            this.log(`❌ Error creating bottom mark: ${error.message}`);
+            this.updateStatus(`Error: ${error.message}`, 'warning');
+        }
     }
 
     updateStatus(message, type = 'info') {
