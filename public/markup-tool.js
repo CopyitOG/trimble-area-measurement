@@ -161,38 +161,52 @@ class AttributeMarkupTool {
     restoreUIFromPreferences() {
         if (!this.savedPreferences) return;
 
-        const prefs = this.savedPreferences;
+        try {
+            const prefs = this.savedPreferences;
 
-        // Restore property names in textarea
-        if (prefs.propertyNames) {
-            document.getElementById('properties-input').value = prefs.propertyNames.join(', ');
+            // Restore property names in textarea
+            if (prefs.propertyNames) {
+                const textarea = document.getElementById('property-names');
+                if (textarea) {
+                    textarea.value = prefs.propertyNames.join(', ');
+                }
+            }
+
+            // Restore longitudinal position
+            if (prefs.longitudinalPosition) {
+                document.querySelectorAll('.position-selector-longitudinal .position-box').forEach(box => {
+                    box.classList.toggle('active', box.dataset.position === prefs.longitudinalPosition);
+                });
+            }
+
+            // Restore section position
+            if (prefs.sectionPosition) {
+                document.querySelectorAll('.position-selector-section .position-box').forEach(box => {
+                    box.classList.toggle('active', box.dataset.position === prefs.sectionPosition);
+                });
+            }
+
+            // Restore recreate checkbox
+            if (prefs.recreate !== undefined) {
+                const recreateCheck = document.getElementById('recreate-check');
+                if (recreateCheck) {
+                    recreateCheck.checked = prefs.recreate;
+                }
+            }
+
+            // Restore clear mode
+            if (prefs.clearMode) {
+                const clearRadio = document.getElementById(`clear-${prefs.clearMode}`);
+                if (clearRadio) {
+                    clearRadio.checked = true;
+                }
+            }
+
+            this.log('✅ UI restored from saved preferences');
+        } catch (error) {
+            this.log(`⚠️ Error restoring preferences: ${error.message}`);
+            // Don't throw - allow initialization to continue
         }
-
-        // Restore longitudinal position
-        if (prefs.longitudinalPosition) {
-            document.querySelectorAll('.position-selector-longitudinal .position-box').forEach(box => {
-                box.classList.toggle('active', box.dataset.position === prefs.longitudinalPosition);
-            });
-        }
-
-        // Restore section position
-        if (prefs.sectionPosition) {
-            document.querySelectorAll('.position-selector-section .position-box').forEach(box => {
-                box.classList.toggle('active', box.dataset.position === prefs.sectionPosition);
-            });
-        }
-
-        // Restore recreate checkbox
-        if (prefs.recreate !== undefined) {
-            document.getElementById('recreate-check').checked = prefs.recreate;
-        }
-
-        // Restore clear mode
-        if (prefs.clearMode) {
-            document.getElementById(`clear-${prefs.clearMode}`).checked = true;
-        }
-
-        this.log('✅ UI restored from saved preferences');
     }
 
     getSelectedPositions() {
