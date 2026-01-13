@@ -324,7 +324,6 @@ class AttributeMarkupTool {
             this.updateStatus('Connection failed. Make sure to load this in Trimble Connect.', 'warning');
         }
     }
-
     async handleEvent(event, data) {
         // Listen for selection changes
         if (event === 'viewer.onSelectionChanged') {
@@ -342,6 +341,13 @@ class AttributeMarkupTool {
                 // Collect all selected object IDs
                 for (const modelSelection of selection) {
                     modelSelection.objectRuntimeIds.forEach(id => currentObjectIds.add(id));
+                }
+
+                // If selection is empty, remove all live labels
+                if (currentObjectIds.size === 0 && this.objectToMarkupMap.size > 0) {
+                    const allTrackedObjects = Array.from(this.objectToMarkupMap.keys());
+                    await this.removeLabelsForObjects(allTrackedObjects);
+                    return;
                 }
 
                 // Find newly selected objects (need to add labels)
