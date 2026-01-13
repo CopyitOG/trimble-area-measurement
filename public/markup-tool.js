@@ -80,9 +80,6 @@ class AttributeMarkupTool {
         // Save preferences on change
         document.getElementById('property-names').addEventListener('input', () => this.saveToLocalStorage());
         document.getElementById('recreate-check').addEventListener('change', () => this.saveToLocalStorage());
-        document.querySelectorAll('input[name="clearMode"]').forEach(radio => {
-            radio.addEventListener('change', () => this.saveToLocalStorage());
-        });
 
         this.log('UI event listeners attached');
     }
@@ -762,54 +759,10 @@ class AttributeMarkupTool {
     }
 
     async clearAllLabels() {
-        const clearMode = document.querySelector('input[name="clearMode"]:checked')?.value || 'all';
-
-        if (clearMode === 'selected') {
-            // Clear only labels for selected elements
-            await this.clearSelectedLabels();
-        } else {
-            // Clear all labels
-            await this.clearMarkupsOnly();
-            this.log('All markups cleared');
-            this.updateStatus('All markups cleared', 'info');
-        }
-    }
-
-    async clearSelectedLabels() {
-        try {
-            this.log('🎯 Clearing labels for selected elements only...');
-
-            // Get currently selected objects
-            const selection = await this.api.viewer.getSelection();
-
-            if (!selection || selection.length === 0) {
-                this.updateStatus('⚠️ No elements selected', 'warning');
-                return;
-            }
-
-            // Collect all selected object IDs across all models
-            const selectedObjectIds = new Set();
-            for (const modelSelection of selection) {
-                modelSelection.objectRuntimeIds.forEach(id => selectedObjectIds.add(id));
-            }
-
-            // Get markup info to filter by objectId
-            // Note: The Trimble API doesn't provide getMarkupInfo, so we need to track which 
-            // markups belong to which objects. For now, we'll clear all and recreate non-selected.
-            // This is a limitation of the current API.
-
-            // Alternative approach: Store object-to-markup mapping
-            // For this implementation, we'll clear all text markups and provide a message
-            this.log('⚠️ API limitation: Cannot filter markups by object. Clearing all text labels.');
-            this.log('💡 Tip: Use Recreate mode (checked) to refresh labels for selected elements.');
-
-            await this.clearMarkupsOnly();
-            this.updateStatus('Cleared all labels (API limitation prevents selective clear)', 'info');
-
-        } catch (error) {
-            this.log(`❌ Error clearing selected labels: ${error.message}`);
-            this.updateStatus(`Error: ${error.message}`, 'warning');
-        }
+        // Always clear all markups (selective clearing not possible with API)
+        await this.clearMarkupsOnly();
+        this.log('All markups cleared');
+        this.updateStatus('All markups cleared', 'info');
     }
 
     async markZMax() {
