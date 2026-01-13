@@ -64,17 +64,85 @@ class AttributeMarkupTool {
         document.getElementById('apply-btn').addEventListener('click', () => this.applyLabels());
         document.getElementById('clear-btn').addEventListener('click', () => this.clearAllLabels());
 
-        // Bounding box buttons
-        document.getElementById('z-max-btn').addEventListener('click', () => this.markZMax());
-        document.getElementById('z-min-btn').addEventListener('click', () => this.markZMin());
+        // Bounding box tools
         document.getElementById('dimensions-btn').addEventListener('click', () => this.showDimensions());
         document.getElementById('box-btn').addEventListener('click', () => this.showBoundingBox());
 
-        // Center-based features
-        document.getElementById('mark-center-btn').addEventListener('click', () => this.markInCenter());
-        document.getElementById('dimension-center-btn').addEventListener('click', () => this.dimensionCenter());
+        // Position selector interaction
+        this.setupPositionSelectors();
 
         this.log('UI event listeners attached');
+    }
+
+    setupPositionSelectors() {
+        // Get all position boxes
+        const longitudinalBoxes = document.querySelectorAll('.position-selector-longitudinal .position-box');
+        const sectionBoxes = document.querySelectorAll('.position-selector-section .position-box');
+
+        // Handle longitudinal position selection (radio behavior)
+        longitudinalBoxes.forEach(box => {
+            box.addEventListener('click', () => {
+                longitudinalBoxes.forEach(b => b.classList.remove('active'));
+                box.classList.add('active');
+                this.log(`Longitudinal position selected: ${box.dataset.position}`);
+            });
+        });
+
+        // Handle section position selection (radio behavior)
+        sectionBoxes.forEach(box => {
+            box.addEventListener('click', () => {
+                sectionBoxes.forEach(b => b.classList.remove('active'));
+                box.classList.add('active');
+                this.log(`Section position selected: ${box.dataset.position}`);
+            });
+        });
+
+        this.log('Position selectors initialized');
+    }
+
+    getSelectedPositions() {
+        const longitudinal = document.querySelector('.position-selector-longitudinal .position-box.active')?.dataset.position || 'middle';
+        const section = document.querySelector('.position-selector-section .position-box.active')?.dataset.position || 'middle-center';
+        return { longitudinal, section };
+    }
+
+    calculateLabelPosition(bbox, longitudinal, section) {
+        //  Calculate position based on selections
+        let x, y, z;
+
+        // Longitudinal position (along length/X axis)
+        if (longitudinal === 'start') {
+            x = bbox.min.x;
+        } else if (longitudinal === 'end') {
+            x = bbox.max.x;
+        } else { // middle
+            x = (bbox.min.x + bbox.max.x) / 2;
+        }
+
+        // Section position (Y and Z)
+        const sectionParts = section.split('-');
+        const vertical = sectionParts[0]; // top, middle, bottom
+        const horizontal = sectionParts[1]; // left, center, right
+
+        // Vertical (Z axis)
+        if (vertical === 'top') {
+            z = bbox.max.z;
+        } else if (vertical === 'bottom') {
+            z = bbox.min.z;
+        } else { // middle
+            z = (bbox.min.z + bbox.max.z) / 2;
+        }
+
+        // Horizontal (Y axis)
+        if (horizontal === 'left') {
+            y = bbox.min.y;
+        } else if (horizontal === 'right') {
+            y = bbox.max.y;
+        } else { // center
+            y = (bbox.min.y + bbox.max.y) / 2;
+        }
+
+        return { x, y, z };
     }
 
     async connectToWorkspace() {
@@ -186,11 +254,12 @@ class AttributeMarkupTool {
             }
 
             const bbox = bboxes[0].boundingBox;
-            const position = {
-                x: (bbox.min.x + bbox.max.x) / 2,
-                y: (bbox.min.y + bbox.max.y) / 2,
-                z: bbox.max.z // Top of the object
-            };
+
+            // Get selected positions from UI
+            const { longitudinal, section } = this.getSelectedPositions();
+
+            // Calculate position based on user selection
+            const position = this.calculateLabelPosition(bbox, longitudinal, section);
 
             // Format label text based on properties
             const labelText = this.extractProperties(properties);

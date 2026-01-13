@@ -169,6 +169,61 @@ details summary::-webkit-details-marker {
     color: #858585;
 }
 
+/* ===========================
+   Position Selector Styles
+   =========================== */
+
+.position-selector-longitudinal {
+    display: flex;
+    gap: 4px;
+    background: var(--trimble-gray-2);
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid var(--trimble-gray-4);
+}
+
+.position-selector-section {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    background: var(--trimble-gray-2);
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid var(--trimble-gray-4);
+}
+
+.position-box {
+    width: 28px;
+    height: 28px;
+    background: white;
+    border: 2px solid var(--trimble-gray-4);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.position-box:hover {
+    border-color: var(--trimble-blue);
+    background: #e3f2fd;
+}
+
+.position-box.active {
+    background: var(--trimble-blue);
+    border-color: var(--trimble-blue);
+    position: relative;
+}
+
+.position-box.active::after {
+    content: '✓';
+    position: absolute;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
 /* 3D Labels - Custom positioning for extension functionality */
 .label-3d {
     position: fixed;

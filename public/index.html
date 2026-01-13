@@ -56,19 +56,49 @@
             </button>
         </div>
 
-        <!-- Bounding Box Section -->
+
+        <!-- Label Position Selector -->
         <div class="card mb-3">
             <div class="card-body" style="padding: var(--spacing-2);">
-                <h6 class="card-title text-center mb-2" style="color: var(--trimble-gray-7);">Bounding Box</h6>
-                <div class="d-flex gap-2 flex-wrap mb-2">
-                    <button id="z-max-btn" class="btn btn-primary flex-fill">Z Max</button>
-                    <button id="z-min-btn" class="btn btn-primary flex-fill">Z Min</button>
+                <h6 class="card-title text-center mb-2" style="color: var(--trimble-gray-7); font-size: 0.875rem;">Label
+                    Position</h6>
+
+                <div class="d-flex justify-content-center gap-3 mb-2">
+                    <!-- Longitudinal Position (Left selector) -->
+                    <div>
+                        <div class="text-center mb-1" style="font-size: 0.75rem; color: var(--trimble-gray-6);">
+                            Longitudinal</div>
+                        <div class="position-selector-longitudinal">
+                            <div class="position-box" data-position="start" title="Start"></div>
+                            <div class="position-box active" data-position="middle" title="Middle"></div>
+                            <div class="position-box" data-position="end" title="End"></div>
+                        </div>
+                    </div>
+
+                    <!-- Section Position (Right selector - 3x3 grid) -->
+                    <div>
+                        <div class="text-center mb-1" style="font-size: 0.75rem; color: var(--trimble-gray-6);">Section
+                        </div>
+                        <div class="position-selector-section">
+                            <div class="position-box" data-position="top-left" title="Top-Left"></div>
+                            <div class="position-box" data-position="top-center" title="Top-Center"></div>
+                            <div class="position-box" data-position="top-right" title="Top-Right"></div>
+                            <div class="position-box" data-position="middle-left" title="Middle-Left"></div>
+                            <div class="position-box active" data-position="middle-center" title="Center"></div>
+                            <div class="position-box" data-position="middle-right" title="Middle-Right"></div>
+                            <div class="position-box" data-position="bottom-left" title="Bottom-Left"></div>
+                            <div class="position-box" data-position="bottom-center" title="Bottom-Center"></div>
+                            <div class="position-box" data-position="bottom-right" title="Bottom-Right"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bounding Box Tools -->
+                <h6 class="text-center mt-3 mb-2" style="color: var(--trimble-gray-7); font-size: 0.875rem;">Bounding
+                    Box</h6>
+                <div class="d-flex gap-2">
                     <button id="dimensions-btn" class="btn btn-primary flex-fill">Dimensions</button>
                     <button id="box-btn" class="btn btn-primary flex-fill">Box</button>
-                </div>
-                <div class="d-flex gap-2 flex-wrap">
-                    <button id="mark-center-btn" class="btn btn-primary flex-fill">Mark in Center</button>
-                    <button id="dimension-center-btn" class="btn btn-primary flex-fill">Dimension Center</button>
                 </div>
             </div>
         </div>
