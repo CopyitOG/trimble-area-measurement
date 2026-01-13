@@ -70,6 +70,10 @@ class AttributeMarkupTool {
         document.getElementById('dimensions-btn').addEventListener('click', () => this.showDimensions());
         document.getElementById('box-btn').addEventListener('click', () => this.showBoundingBox());
 
+        // Center-based features
+        document.getElementById('mark-center-btn').addEventListener('click', () => this.markInCenter());
+        document.getElementById('dimension-center-btn').addEventListener('click', () => this.dimensionCenter());
+
         this.log('UI event listeners attached');
     }
 
@@ -634,6 +638,107 @@ class AttributeMarkupTool {
         }
     }
 
+    async markInCenter() {
+        if (!this.api) {
+            this.updateStatus('Not connected to Trimble Connect', 'warning');
+            return;
+        }
+
+        try {
+            this.log('🎯 Creating labels at center positions...');
+            const selection = await this.api.viewer.getSelection();
+
+            if (!selection || selection.length === 0) {
+                this.updateStatus('⚠️ No elements selected. Please select elements first.', 'warning');
+                return;
+            }
+
+            const markups = [];
+            let successCount = 0;
+
+            for (const modelSelection of selection) {
+                const modelId = modelSelection.modelId;
+                const objectIds = modelSelection.objectRuntimeIds;
+
+                this.log(`Processing ${objectIds.length} objects from model ${modelId}...`);
+
+                // Get properties for all objects
+                const objectPropsArray = await this.api.viewer.getObjectProperties(modelId, objectIds);
+
+                // Get bounding boxes for center positions
+                const bboxes = await this.api.viewer.getObjectBoundingBoxes(modelId, objectIds);
+
+                for (let i = 0; i < objectIds.length; i++) {
+                    const objectId = objectIds[i];
+                    const objectProps = objectPropsArray[i];
+                    const bboxData = bboxes[i];
+
+                    if (!bboxData || !bboxData.boundingBox) {
+                        this.log(`No bounding box for object ${objectId}, skipping...`);
+                        continue;
+                    }
+
+                    const bbox = bboxData.boundingBox;
+
+                    // Calculate center position
+                    const centerPosition = {
+                        x: (bbox.min.x + bbox.max.x) / 2,
+                        y: (bbox.min.y + bbox.max.y) / 2,
+                        z: (bbox.min.z + bbox.max.z) / 2
+                    };
+
+                    // Extract properties to display
+                    const labelText = this.extractProperties(objectProps);
+
+                    if (!labelText || labelText === 'No data') {
+                        this.log(`No properties found for object ${objectId}, skipping...`);
+                        continue;
+                    }
+
+                    // Create TextMarkup at center
+                    const textMarkup = {
+                        start: {
+                            positionX: centerPosition.x * 1000, // Convert m to mm
+                            positionY: centerPosition.y * 1000,
+                            positionZ: centerPosition.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        end: {
+                            positionX: centerPosition.x * 1000 + 200, // Leader line offset
+                            positionY: centerPosition.y * 1000,
+                            positionZ: centerPosition.z * 1000 + 100,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        text: labelText,
+                        color: { r: 102, g: 126, b: 234, a: 1 } // Purple color
+                    };
+
+                    markups.push(textMarkup);
+                    successCount++;
+                }
+            }
+
+            if (markups.length === 0) {
+                this.updateStatus('No labels could be created. Check property names.', 'warning');
+                return;
+            }
+
+            // Add all markups to viewer
+            const results = await this.api.markup.addTextMarkup(markups);
+            this.markupIds.push(...results.map(m => m.id));
+
+            this.log(`✅ Successfully created ${results.length} center labels`);
+            this.updateStatus(`✅ Created ${results.length} center labels`, 'success');
+            document.getElementById('labels-count').textContent = this.markupIds.length;
+
+        } catch (error) {
+            this.log(`❌ Error creating center labels: ${error.message}`);
+            this.updateStatus(`Error: ${error.message}`, 'warning');
+        }
+    }
+
     async showDimensions() {
         try {
             this.log('📏 Creating bounding box dimensions...');
@@ -771,6 +876,171 @@ class AttributeMarkupTool {
 
         } catch (error) {
             this.log(`❌ Error creating dimensions: ${error.message}`);
+            this.updateStatus(`Error: ${error.message}`, 'warning');
+        }
+    }
+
+    async dimensionCenter() {
+        try {
+            this.log('📐 Creating centerline dimensions...');
+            const selection = await this.api.viewer.getSelection();
+
+            if (!selection || selection.length === 0) {
+                this.updateStatus('⚠️ No elements selected', 'warning');
+                return;
+            }
+
+            const measurements = [];
+
+            for (const modelSelection of selection) {
+                const modelId = modelSelection.modelId;
+                const objectIds = modelSelection.objectRuntimeIds;
+
+                const bboxes = await this.api.viewer.getObjectBoundingBoxes(modelId, objectIds);
+
+                for (const bboxData of bboxes) {
+                    const bbox = bboxData.boundingBox;
+                    const objectId = bboxData.objectRuntimeId;
+
+                    // Calculate center points
+                    const centerX = (bbox.min.x + bbox.max.x) / 2;
+                    const centerY = (bbox.min.y + bbox.max.y) / 2;
+                    const centerZ = (bbox.min.z + bbox.max.z) / 2;
+
+                    // Dimension 1: Length along centerline (X-axis through center)
+                    measurements.push({
+                        start: {
+                            positionX: bbox.min.x * 1000,
+                            positionY: centerY * 1000,
+                            positionZ: centerZ * 1000,
+                            modelId: modelId,
+                            objectId: objectId,
+                            type: 'lineSegment',
+                            position2X: bbox.max.x * 1000,
+                            position2Y: centerY * 1000,
+                            position2Z: centerZ * 1000
+                        },
+                        end: {
+                            positionX: bbox.max.x * 1000,
+                            positionY: centerY * 1000,
+                            positionZ: centerZ * 1000,
+                            modelId: modelId,
+                            objectId: objectId,
+                            type: 'lineSegment',
+                            position2X: bbox.min.x * 1000,
+                            position2Y: centerY * 1000,
+                            position2Z: centerZ * 1000
+                        },
+                        mainLineStart: {
+                            positionX: bbox.min.x * 1000,
+                            positionY: centerY * 1000,
+                            positionZ: centerZ * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        mainLineEnd: {
+                            positionX: bbox.max.x * 1000,
+                            positionY: centerY * 1000,
+                            positionZ: centerZ * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        color: { r: 255, g: 140, b: 0, a: 1 } // Orange color for distinction
+                    });
+
+                    // Dimension 2: Width along centerline (Y-axis through center)
+                    measurements.push({
+                        start: {
+                            positionX: centerX * 1000,
+                            positionY: bbox.min.y * 1000,
+                            positionZ: centerZ * 1000,
+                            modelId: modelId,
+                            objectId: objectId,
+                            type: 'lineSegment',
+                            position2X: centerX * 1000,
+                            position2Y: bbox.max.y * 1000,
+                            position2Z: centerZ * 1000
+                        },
+                        end: {
+                            positionX: centerX * 1000,
+                            positionY: bbox.max.y * 1000,
+                            positionZ: centerZ * 1000,
+                            modelId: modelId,
+                            objectId: objectId,
+                            type: 'lineSegment',
+                            position2X: centerX * 1000,
+                            position2Y: bbox.min.y * 1000,
+                            position2Z: centerZ * 1000
+                        },
+                        mainLineStart: {
+                            positionX: centerX * 1000,
+                            positionY: bbox.min.y * 1000,
+                            positionZ: centerZ * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        mainLineEnd: {
+                            positionX: centerX * 1000,
+                            positionY: bbox.max.y * 1000,
+                            positionZ: centerZ * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        color: { r: 255, g: 140, b: 0, a: 1 } // Orange color
+                    });
+
+                    // Dimension 3: Height along centerline (Z-axis through center)
+                    measurements.push({
+                        start: {
+                            positionX: centerX * 1000,
+                            positionY: centerY * 1000,
+                            positionZ: bbox.min.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId,
+                            type: 'lineSegment',
+                            position2X: centerX * 1000,
+                            position2Y: centerY * 1000,
+                            position2Z: bbox.max.z * 1000
+                        },
+                        end: {
+                            positionX: centerX * 1000,
+                            positionY: centerY * 1000,
+                            positionZ: bbox.max.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId,
+                            type: 'lineSegment',
+                            position2X: centerX * 1000,
+                            position2Y: centerY * 1000,
+                            position2Z: bbox.min.z * 1000
+                        },
+                        mainLineStart: {
+                            positionX: centerX * 1000,
+                            positionY: centerY * 1000,
+                            positionZ: bbox.min.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        mainLineEnd: {
+                            positionX: centerX * 1000,
+                            positionY: centerY * 1000,
+                            positionZ: bbox.max.z * 1000,
+                            modelId: modelId,
+                            objectId: objectId
+                        },
+                        color: { r: 255, g: 140, b: 0, a: 1 } // Orange color
+                    });
+                }
+            }
+
+            const result = await this.api.markup.addMeasurementMarkups(measurements);
+            this.measurementMarkupIds.push(...result.map(m => m.id));
+
+            const elementsCount = measurements.length / 3;
+            this.log(`✅ Created 3 centerline dimensions for ${elementsCount} element(s)`);
+            this.updateStatus(`✅ Centerline dimensions for ${elementsCount} element(s)`, 'success');
+
+        } catch (error) {
+            this.log(`❌ Error creating centerline dimensions: ${error.message}`);
             this.updateStatus(`Error: ${error.message}`, 'warning');
         }
     }
