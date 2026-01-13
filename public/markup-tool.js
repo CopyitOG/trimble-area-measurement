@@ -78,7 +78,7 @@ class AttributeMarkupTool {
         this.restoreUIFromPreferences();
 
         // Save preferences on change
-        document.getElementById('properties-input').addEventListener('input', () => this.saveToLocalStorage());
+        document.getElementById('property-names').addEventListener('input', () => this.saveToLocalStorage());
         document.getElementById('recreate-check').addEventListener('change', () => this.saveToLocalStorage());
         document.querySelectorAll('input[name="clearMode"]').forEach(radio => {
             radio.addEventListener('change', () => this.saveToLocalStorage());
