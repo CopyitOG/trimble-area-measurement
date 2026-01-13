@@ -790,48 +790,48 @@ class AttributeMarkupTool {
     }
 
     async clearMarkupsOnly() {
-        if (this.markupIds.length > 0) {
-            try {
-                await this.api.markup.removeMarkups(this.markupIds);
-                this.log(`🗑️ Removed ${this.markupIds.length} text markups`);
+        try {
+            // Get ALL markups from the viewer
+            this.log('🔍 Fetching all markups...');
+            const allMarkups = await this.api.markup.getAllMarkups();
+
+            if (!allMarkups || allMarkups.length === 0) {
+                this.log('No markups in viewer');
+                // Still clear tracking
                 this.markupIds = [];
-                document.getElementById('labels-count').textContent = '0';
-            } catch (error) {
-                this.log(`Error removing text markups: ${error.message}`);
-            }
-        }
-
-        // Also clear point markups
-        if (this.pointMarkupIds.length > 0) {
-            try {
-                await this.api.markup.removeMarkups(this.pointMarkupIds);
-                this.log(`🗑️ Removed ${this.pointMarkupIds.length} point markups`);
                 this.pointMarkupIds = [];
-            } catch (error) {
-                this.log(`Error removing point markups: ${error.message}`);
-            }
-        }
-
-        // Clear line markups (bounding boxes)
-        if (this.lineMarkupIds.length > 0) {
-            try {
-                await this.api.markup.removeMarkups(this.lineMarkupIds);
-                this.log(`🗑️ Removed ${this.lineMarkupIds.length} line markups`);
                 this.lineMarkupIds = [];
-            } catch (error) {
-                this.log(`Error removing line markups: ${error.message}`);
-            }
-        }
-
-        // Clear measurement markups (dimensions)
-        if (this.measurementMarkupIds.length > 0) {
-            try {
-                await this.api.markup.removeMarkups(this.measurementMarkupIds);
-                this.log(`🗑️ Removed ${this.measurementMarkupIds.length} dimension markups`);
                 this.measurementMarkupIds = [];
-            } catch (error) {
-                this.log(`Error removing dimension markups: ${error.message}`);
+                this.objectToMarkupMap.clear();
+                return;
             }
+
+            this.log(`Found ${allMarkups.length} total markups`);
+
+            // Collect IDs of our markup types
+            const idsToRemove = [];
+            for (const markup of allMarkups) {
+                if (markup.type === 'text' || markup.type === 'point' ||
+                    markup.type === 'line' || markup.type === 'measurement') {
+                    idsToRemove.push(markup.id);
+                }
+            }
+
+            if (idsToRemove.length > 0) {
+                await this.api.markup.removeMarkups(idsToRemove);
+                this.log(`🗑️ Removed ${idsToRemove.length} markup(s)`);
+            }
+
+            // Clear all tracking
+            this.markupIds = [];
+            this.pointMarkupIds = [];
+            this.lineMarkupIds = [];
+            this.measurementMarkupIds = [];
+            this.objectToMarkupMap.clear(); // Clear live labels tracking
+            this.log('✅ All tracking cleared');
+
+        } catch (error) {
+            this.log(`❌ Error clearing markups: ${error.message}`);
         }
     }
 
