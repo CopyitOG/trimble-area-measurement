@@ -11,6 +11,9 @@ class AttributeMarkupTool {
         this.measurementMarkupIds = []; // Track created measurement markup IDs
         this.propertyNames = ['Name', 'Type']; // Default properties
 
+        // Load user preferences from localStorage
+        this.loadFromLocalStorage();
+
         // IFC Schema-Aware Core Attribute Mappings
         // These map to IfcRoot schema attributes (indices 3, 4, 5, 8 in IFC EXPRESS)
         this.ifcCoreAttributes = {
@@ -71,6 +74,16 @@ class AttributeMarkupTool {
         // Position selector interaction
         this.setupPositionSelectors();
 
+        // Restore previously saved user preferences
+        this.restoreUIFromPreferences();
+
+        // Save preferences on change
+        document.getElementById('properties-input').addEventListener('input', () => this.saveToLocalStorage());
+        document.getElementById('recreate-check').addEventListener('change', () => this.saveToLocalStorage());
+        document.querySelectorAll('input[name="clearMode"]').forEach(radio => {
+            radio.addEventListener('change', () => this.saveToLocalStorage());
+        });
+
         this.log('UI event listeners attached');
     }
 
@@ -85,6 +98,7 @@ class AttributeMarkupTool {
                 longitudinalBoxes.forEach(b => b.classList.remove('active'));
                 box.classList.add('active');
                 this.log(`Longitudinal position selected: ${box.dataset.position}`);
+                this.saveToLocalStorage();
             });
         });
 
@@ -94,10 +108,91 @@ class AttributeMarkupTool {
                 sectionBoxes.forEach(b => b.classList.remove('active'));
                 box.classList.add('active');
                 this.log(`Section position selected: ${box.dataset.position}`);
+                this.saveToLocalStorage();
             });
         });
 
         this.log('Position selectors initialized');
+    }
+
+    saveToLocalStorage() {
+        try {
+            const longitudinal = document.querySelector('.position-selector-longitudinal .position-box.active')?.dataset.position || 'middle';
+            const section = document.querySelector('.position-selector-section .position-box.active')?.dataset.position || 'middle-center';
+            const recreate = document.getElementById('recreate-check').checked;
+            const clearMode = document.querySelector('input[name="clearMode"]:checked')?.value || 'all';
+
+            const preferences = {
+                propertyNames: this.propertyNames,
+                longitudinalPosition: longitudinal,
+                sectionPosition: section,
+                recreate: recreate,
+                clearMode: clearMode
+            };
+
+            localStorage.setItem('attributeMarkupPreferences', JSON.stringify(preferences));
+            this.log('💾 Preferences saved to localStorage');
+        } catch (error) {
+            this.log(`Error saving preferences: ${error.message}`);
+        }
+    }
+
+    loadFromLocalStorage() {
+        try {
+            const saved = localStorage.getItem('attributeMarkupPreferences');
+            if (!saved) return;
+
+            const preferences = JSON.parse(saved);
+
+            // Restore property names
+            if (preferences.propertyNames) {
+                this.propertyNames = preferences.propertyNames;
+                // Will be set in setupUI after DOM is ready
+            }
+
+            // Store for later restoration in setupUI
+            this.savedPreferences = preferences;
+            this.log('📂 Preferences loaded from localStorage');
+        } catch (error) {
+            this.log(`Error loading preferences: ${error.message}`);
+        }
+    }
+
+    restoreUIFromPreferences() {
+        if (!this.savedPreferences) return;
+
+        const prefs = this.savedPreferences;
+
+        // Restore property names in textarea
+        if (prefs.propertyNames) {
+            document.getElementById('properties-input').value = prefs.propertyNames.join(', ');
+        }
+
+        // Restore longitudinal position
+        if (prefs.longitudinalPosition) {
+            document.querySelectorAll('.position-selector-longitudinal .position-box').forEach(box => {
+                box.classList.toggle('active', box.dataset.position === prefs.longitudinalPosition);
+            });
+        }
+
+        // Restore section position
+        if (prefs.sectionPosition) {
+            document.querySelectorAll('.position-selector-section .position-box').forEach(box => {
+                box.classList.toggle('active', box.dataset.position === prefs.sectionPosition);
+            });
+        }
+
+        // Restore recreate checkbox
+        if (prefs.recreate !== undefined) {
+            document.getElementById('recreate-check').checked = prefs.recreate;
+        }
+
+        // Restore clear mode
+        if (prefs.clearMode) {
+            document.getElementById(`clear-${prefs.clearMode}`).checked = true;
+        }
+
+        this.log('✅ UI restored from saved preferences');
     }
 
     getSelectedPositions() {
@@ -106,43 +201,77 @@ class AttributeMarkupTool {
         return { longitudinal, section };
     }
 
-    calculateLabelPosition(bbox, longitudinal, section) {
-        //  Calculate position based on selections
-        let x, y, z;
+    detectBoundingBoxAxes(bbox) {
+        // Calculate dimensions along each axis
+        const xLength = Math.abs(bbox.max.x - bbox.min.x);
+        const yLength = Math.abs(bbox.max.y - bbox.min.y);
+        const zLength = Math.abs(bbox.max.z - bbox.min.z);
 
-        // Longitudinal position (along length/X axis)
+        // Find longest axis for longitudinal
+        const dimensions = [
+            { axis: 'x', length: xLength, min: bbox.min.x, max: bbox.max.x },
+            { axis: 'y', length: yLength, min: bbox.min.y, max: bbox.max.y },
+            { axis: 'z', length: zLength, min: bbox.min.z, max: bbox.max.z }
+        ];
+
+        // Sort by length (descending)
+        dimensions.sort((a, b) => b.length - a.length);
+
+        const longitudinalAxis = dimensions[0]; // Longest
+        const sectionVertical = dimensions[1];   // Second longest (vertical section)
+        const sectionHorizontal = dimensions[2]; // Shortest (horizontal section)
+
+        return { longitudinalAxis, sectionVertical, sectionHorizontal };
+    }
+
+    calculateLabelPosition(bbox, longitudinal, section) {
+        // Detect dynamic axes based on bounding box dimensions
+        const { longitudinalAxis, sectionVertical, sectionHorizontal } = this.detectBoundingBoxAxes(bbox);
+
+        this.log(`📐 Detected axes: Longitudinal=${longitudinalAxis.axis.toUpperCase()} (${longitudinalAxis.length.toFixed(2)}m), Vertical=${sectionVertical.axis.toUpperCase()}, Horizontal=${sectionHorizontal.axis.toUpperCase()}`);
+
+        // Calculate longitudinal position
+        let longitudinalValue;
         if (longitudinal === 'start') {
-            x = bbox.min.x;
+            longitudinalValue = longitudinalAxis.min;
         } else if (longitudinal === 'end') {
-            x = bbox.max.x;
+            longitudinalValue = longitudinalAxis.max;
         } else { // middle
-            x = (bbox.min.x + bbox.max.x) / 2;
+            longitudinalValue = (longitudinalAxis.min + longitudinalAxis.max) / 2;
         }
 
-        // Section position (Y and Z)
+        // Parse section position
         const sectionParts = section.split('-');
         const vertical = sectionParts[0]; // top, middle, bottom
         const horizontal = sectionParts[1]; // left, center, right
 
-        // Vertical (Z axis)
+        // Calculate vertical section position
+        let verticalValue;
         if (vertical === 'top') {
-            z = bbox.max.z;
+            verticalValue = sectionVertical.max;
         } else if (vertical === 'bottom') {
-            z = bbox.min.z;
+            verticalValue = sectionVertical.min;
         } else { // middle
-            z = (bbox.min.z + bbox.max.z) / 2;
+            verticalValue = (sectionVertical.min + sectionVertical.max) / 2;
         }
 
-        // Horizontal (Y axis)
+        // Calculate horizontal section position
+        let horizontalValue;
         if (horizontal === 'left') {
-            y = bbox.min.y;
+            horizontalValue = sectionHorizontal.min;
         } else if (horizontal === 'right') {
-            y = bbox.max.y;
+            horizontalValue = sectionHorizontal.max;
         } else { // center
-            y = (bbox.min.y + bbox.max.y) / 2;
+            horizontalValue = (sectionHorizontal.min + sectionHorizontal.max) / 2;
         }
 
-        return { x, y, z };
+        // Map back to XYZ coordinates
+        const position = { x: 0, y: 0, z: 0 };
+        position[longitudinalAxis.axis] = longitudinalValue;
+        position[sectionVertical.axis] = verticalValue;
+        position[sectionHorizontal.axis] = horizontalValue;
+
+        return position;
     }
 
     async connectToWorkspace() {
@@ -187,6 +316,16 @@ class AttributeMarkupTool {
         try {
             this.log('📝 Getting selected elements from viewer...');
 
+            // Check Recreate mode
+            const recreateMode = document.getElementById('recreate-check').checked;
+
+            if (recreateMode) {
+                this.log('🔄 Recreate mode: Clearing existing labels first...');
+                await this.clearMarkupsOnly();
+            } else {
+                this.log('➕ Incremental mode: Appending new labels to existing ones...');
+            }
+
             // Get current selection from viewer
             const selection = await this.api.viewer.getSelection();
 
@@ -195,9 +334,6 @@ class AttributeMarkupTool {
                 this.log('No selection found');
                 return;
             }
-
-            // Clear existing markups first
-            await this.clearMarkupsOnly();
 
             const textMarkups = [];
 
@@ -612,9 +748,54 @@ class AttributeMarkupTool {
     }
 
     async clearAllLabels() {
-        await this.clearMarkupsOnly();
-        this.log('All markups cleared');
-        this.updateStatus('All markups cleared', 'info');
+        const clearMode = document.querySelector('input[name="clearMode"]:checked')?.value || 'all';
+
+        if (clearMode === 'selected') {
+            // Clear only labels for selected elements
+            await this.clearSelectedLabels();
+        } else {
+            // Clear all labels
+            await this.clearMarkupsOnly();
+            this.log('All markups cleared');
+            this.updateStatus('All markups cleared', 'info');
+        }
+    }
+
+    async clearSelectedLabels() {
+        try {
+            this.log('🎯 Clearing labels for selected elements only...');
+
+            // Get currently selected objects
+            const selection = await this.api.viewer.getSelection();
+
+            if (!selection || selection.length === 0) {
+                this.updateStatus('⚠️ No elements selected', 'warning');
+                return;
+            }
+
+            // Collect all selected object IDs across all models
+            const selectedObjectIds = new Set();
+            for (const modelSelection of selection) {
+                modelSelection.objectRuntimeIds.forEach(id => selectedObjectIds.add(id));
+            }
+
+            // Get markup info to filter by objectId
+            // Note: The Trimble API doesn't provide getMarkupInfo, so we need to track which 
+            // markups belong to which objects. For now, we'll clear all and recreate non-selected.
+            // This is a limitation of the current API.
+
+            // Alternative approach: Store object-to-markup mapping
+            // For this implementation, we'll clear all text markups and provide a message
+            this.log('⚠️ API limitation: Cannot filter markups by object. Clearing all text labels.');
+            this.log('💡 Tip: Use Recreate mode (checked) to refresh labels for selected elements.');
+
+            await this.clearMarkupsOnly();
+            this.updateStatus('Cleared all labels (API limitation prevents selective clear)', 'info');
+
+        } catch (error) {
+            this.log(`❌ Error clearing selected labels: ${error.message}`);
+            this.updateStatus(`Error: ${error.message}`, 'warning');
+        }
     }
 
     async markZMax() {

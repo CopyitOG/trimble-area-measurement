@@ -46,24 +46,14 @@
             </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="d-flex gap-2 mb-3 flex-wrap">
-            <button id="apply-btn" class="btn btn-primary flex-fill">
-                Create
-            </button>
-            <button id="clear-btn" class="btn btn-primary flex-fill">
-                Clear
-            </button>
-        </div>
 
-
-        <!-- Label Position Selector -->
+        <!-- Label Position Selector (moved above buttons) -->
         <div class="card mb-3">
             <div class="card-body" style="padding: var(--spacing-2);">
                 <h6 class="card-title text-center mb-2" style="color: var(--trimble-gray-7); font-size: 0.875rem;">Label
                     Position</h6>
 
-                <div class="d-flex justify-content-center gap-3 mb-2">
+                <div class="d-flex justify-content-center gap-3">
                     <!-- Longitudinal Position (Left selector) -->
                     <div>
                         <div class="text-center mb-1" style="font-size: 0.75rem; color: var(--trimble-gray-6);">
@@ -92,10 +82,42 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Bounding Box Tools -->
-                <h6 class="text-center mt-3 mb-2" style="color: var(--trimble-gray-7); font-size: 0.875rem;">Bounding
-                    Box</h6>
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2 mb-2 flex-wrap">
+            <button id="apply-btn" class="btn btn-primary flex-fill">
+                Create
+            </button>
+            <button id="clear-btn" class="btn btn-primary flex-fill">
+                Clear
+            </button>
+        </div>
+
+        <!-- Recreate / Selected / All Checkboxes -->
+        <div class="d-flex justify-content-between mb-3" style="font-size: 0.875rem;">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="recreate-check" checked>
+                <label class="form-check-label" for="recreate-check">Recreate</label>
+            </div>
+            <div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="clearMode" id="clear-selected" value="selected">
+                    <label class="form-check-label" for="clear-selected">Selected</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="clearMode" id="clear-all" value="all" checked>
+                    <label class="form-check-label" for="clear-all">All</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bounding Box Section -->
+        <div class="card mb-3">
+            <div class="card-body" style="padding: var(--spacing-2);">
+                <h6 class="card-title text-center mb-2" style="color: var(--trimble-gray-7); font-size: 0.875rem;">
+                    Bounding Box</h6>
                 <div class="d-flex gap-2">
                     <button id="dimensions-btn" class="btn btn-primary flex-fill">Dimensions</button>
                     <button id="box-btn" class="btn btn-primary flex-fill">Box</button>
