@@ -11,6 +11,10 @@ class AttributeMarkupTool {
         this.measurementMarkupIds = []; // Track created measurement markup IDs
         this.propertyNames = ['Name', 'Type']; // Default properties
 
+        // Live Labels tracking
+        this.objectToMarkupMap = new Map(); // Map objectId -> markupId for live labels
+        this.previousSelection = []; // Track previous selection for diff
+
         // Load user preferences from localStorage
         this.loadFromLocalStorage();
 
@@ -80,6 +84,15 @@ class AttributeMarkupTool {
         // Save preferences on change
         document.getElementById('property-names').addEventListener('input', () => this.saveToLocalStorage());
         document.getElementById('recreate-check').addEventListener('change', () => this.saveToLocalStorage());
+        document.getElementById('live-labels-check').addEventListener('change', () => {
+            this.saveToLocalStorage();
+            const isLive = document.getElementById('live-labels-check').checked;
+            this.log(isLive ? '🔴 Live Labels ENABLED' : '⚪ Live Labels DISABLED');
+            if (!isLive) {
+                // Clear live label tracking when disabled
+                this.objectToMarkupMap.clear();
+            }
+        });
 
         this.log('UI event listeners attached');
     }
@@ -117,6 +130,7 @@ class AttributeMarkupTool {
             const longitudinal = document.querySelector('.position-selector-longitudinal .position-box.active')?.dataset.position || 'middle';
             const section = document.querySelector('.position-selector-section .position-box.active')?.dataset.position || 'middle-center';
             const recreate = document.getElementById('recreate-check').checked;
+            const liveLabels = document.getElementById('live-labels-check').checked;
             const clearMode = document.querySelector('input[name="clearMode"]:checked')?.value || 'all';
 
             const preferences = {
@@ -124,6 +138,7 @@ class AttributeMarkupTool {
                 longitudinalPosition: longitudinal,
                 sectionPosition: section,
                 recreate: recreate,
+                liveLabels: liveLabels,
                 clearMode: clearMode
             };
 
@@ -188,6 +203,14 @@ class AttributeMarkupTool {
                 const recreateCheck = document.getElementById('recreate-check');
                 if (recreateCheck) {
                     recreateCheck.checked = prefs.recreate;
+                }
+            }
+
+            // Restore live labels checkbox
+            if (prefs.liveLabels !== undefined) {
+                const liveLabelsCheck = document.getElementById('live-labels-check');
+                if (liveLabelsCheck) {
+                    liveLabelsCheck.checked = prefs.liveLabels;
                 }
             }
 
@@ -302,10 +325,54 @@ class AttributeMarkupTool {
         }
     }
 
-    handleEvent(event, data) {
+    async handleEvent(event, data) {
         // Listen for selection changes
         if (event === 'viewer.onSelectionChanged') {
-            this.updateSelectionCount();
+            await this.updateSelectionCount();
+
+            // Check if Live Labels mode is enabled
+            const liveLabelsEnabled = document.getElementById('live-labels-check')?.checked;
+            if (!liveLabelsEnabled) return;
+
+            try {
+                // Get current selection
+                const selection = await this.api.viewer.getSelection();
+                const currentObjectIds = new Set();
+
+                // Collect all selected object IDs
+                for (const modelSelection of selection) {
+                    modelSelection.objectRuntimeIds.forEach(id => currentObjectIds.add(id));
+                }
+
+                // Find newly selected objects (need to add labels)
+                const newlySelected = [];
+                for (const objId of currentObjectIds) {
+                    if (!this.objectToMarkupMap.has(objId)) {
+                        newlySelected.push(objId);
+                    }
+                }
+
+                // Find deselected objects (need to remove labels)
+                const deselected = [];
+                for (const objId of this.objectToMarkupMap.keys()) {
+                    if (!currentObjectIds.has(objId)) {
+                        deselected.push(objId);
+                    }
+                }
+
+                // Remove labels for deselected objects
+                if (deselected.length > 0) {
+                    await this.removeLabelsForObjects(deselected);
+                }
+
+                // Add labels for newly selected objects
+                if (newlySelected.length > 0 && selection.length > 0) {
+                    await this.addLabelsForObjects(selection, newlySelected);
+                }
+
+            } catch (error) {
+                this.log(`❌ Live Labels error: ${error.message}`);
+            }
         }
     }
 
@@ -437,6 +504,10 @@ class AttributeMarkupTool {
             };
 
             this.log(`Markup prepared for object ${objectId}: "${labelText.substring(0, 50)}..."`);
+
+            // Attach objectId for Live Labels tracking
+            textMarkup.objectId = objectId;
+
             return textMarkup;
 
         } catch (error) {
@@ -763,6 +834,76 @@ class AttributeMarkupTool {
         await this.clearMarkupsOnly();
         this.log('All markups cleared');
         this.updateStatus('All markups cleared', 'info');
+    }
+
+    async addLabelsForObjects(selection, objectIds) {
+        try {
+            const textMarkups = [];
+
+            // Process each model
+            for (const modelSelection of selection) {
+                const modelId = modelSelection.modelId;
+
+                // Filter to only process the newly selected objects
+                const objectsToProcess = modelSelection.objectRuntimeIds.filter(id => objectIds.includes(id));
+                if (objectsToProcess.length === 0) continue;
+
+                // Get properties for these objects
+                const properties = await this.api.viewer.getObjectProperties(modelId, objectsToProcess);
+
+                // Create markup for each object
+                for (let i = 0; i < objectsToProcess.length; i++) {
+                    const objectId = objectsToProcess[i];
+                    const objectProps = properties[i];
+
+                    const markup = await this.createTextMarkup(modelId, objectId, objectProps);
+                    if (markup) {
+                        textMarkups.push(markup);
+                    }
+                }
+            }
+
+            if (textMarkups.length > 0) {
+                // Add all text markups to the viewer
+                const addedMarkups = await this.api.markup.addTextMarkup(textMarkups);
+
+                // Track the object-to-markup mappings
+                for (let i = 0; i < textMarkups.length; i++) {
+                    const markup = textMarkups[i];
+                    const markupId = addedMarkups[i];
+
+                    // Extract objectId from the markup (it was attached during creation)
+                    if (markup.objectId) {
+                        this.objectToMarkupMap.set(markup.objectId, markupId);
+                    }
+                }
+
+                this.log(`🔴 Live: Added ${addedMarkups.length} label(s)`);
+            }
+        } catch (error) {
+            this.log(`❌ Error adding live labels: ${error.message}`);
+        }
+    }
+
+    async removeLabelsForObjects(objectIds) {
+        try {
+            const markupIdsToRemove = [];
+
+            for (const objectId of objectIds) {
+                const markupId = this.objectToMarkupMap.get(objectId);
+                if (markupId) {
+                    markupIdsToRemove.push(markupId);
+                    this.objectToMarkupMap.delete(objectId);
+                }
+            }
+
+            if (markupIdsToRemove.length > 0) {
+                await this.api.markup.removeMarkups(markupIdsToRemove);
+                this.log(`⚪ Live: Removed ${markupIdsToRemove.length} label(s)`);
+            }
+        } catch (error) {
+            this.log(`❌ Error removing live labels: ${error.message}`);
+        }
     }
 
     async markZMax() {
