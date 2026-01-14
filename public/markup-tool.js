@@ -14,6 +14,7 @@ class AttributeMarkupTool {
         // Live Labels tracking
         this.objectToMarkupMap = new Map(); // Map objectId -> markupId for live labels
         this.previousSelection = []; // Track previous selection for diff
+        this.isProcessingSelection = false; // Prevent duplicate event processing
 
         // Load user preferences from localStorage
         this.loadFromLocalStorage();
@@ -333,6 +334,13 @@ class AttributeMarkupTool {
             const liveLabelsEnabled = document.getElementById('live-labels-check')?.checked;
             if (!liveLabelsEnabled) return;
 
+            // Skip if already processing (event fires multiple times)
+            if (this.isProcessingSelection) {
+                this.log('⏭️ Skipping duplicate selection event');
+                return;
+            }
+            this.isProcessingSelection = true;
+
             try {
                 // Get current selection
                 const selection = await this.api.viewer.getSelection();
@@ -378,6 +386,8 @@ class AttributeMarkupTool {
 
             } catch (error) {
                 this.log(`❌ Live Labels error: ${error.message}`);
+            } finally {
+                this.isProcessingSelection = false;
             }
         }
     }
