@@ -873,6 +873,8 @@ class AttributeMarkupTool {
                 // Add all text markups to the viewer
                 const addedMarkups = await this.api.markup.addTextMarkup(textMarkups);
 
+                this.log(`📊 addTextMarkup returned: ${JSON.stringify(addedMarkups).substring(0, 150)}`);
+
                 // Track the object-to-markup mappings
                 for (let i = 0; i < textMarkups.length; i++) {
                     const markup = textMarkups[i];
@@ -881,6 +883,7 @@ class AttributeMarkupTool {
                     // Extract objectId from the markup (it was attached during creation)
                     if (markup.objectId) {
                         this.objectToMarkupMap.set(markup.objectId, markupId);
+                        this.log(`📊 STORE obj${markup.objectId}->markup${markupId}`);
                     }
                 }
 
@@ -897,6 +900,7 @@ class AttributeMarkupTool {
 
             for (const objectId of objectIds) {
                 const markupId = this.objectToMarkupMap.get(objectId);
+                this.log(`📊 GET obj${objectId}->markup${markupId}`);
                 if (markupId) {
                     markupIdsToRemove.push(markupId);
                     this.objectToMarkupMap.delete(objectId);
