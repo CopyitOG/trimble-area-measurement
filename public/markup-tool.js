@@ -547,7 +547,7 @@ class AttributeMarkupTool {
             }
         }
 
-        return lines.length > 0 ? lines.join('\\n') : 'No data';
+        return lines.length > 0 ? lines.join('\n') : 'No data';
     }
 
     logAvailableProperties(objectProps) {
