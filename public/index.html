@@ -22,10 +22,8 @@
                 <span class="badge bg-primary me-2">LABEL</span>
                 BPA Label
             </h1>
-            <p class="text-muted small mb-1">Display custom property labels on selected elements</p>
-            <p class="text-muted" style="font-size: 11px; font-family: monospace;">v2.1.3</p>
+            <p class="text-muted" style="font-size: 11px; font-family: monospace; margin-bottom: 8px;">v3.0.0</p>
         </header>
-
         <!-- Status Alert -->
         <div id="status" class="alert alert-info mb-3" role="alert">
             Connecting to Trimble Connect...
@@ -34,13 +32,12 @@
         <!-- Properties Input Section -->
         <div class="card mb-3">
             <div class="card-body">
-                <h2 class="h6 mb-2">Properties to Display</h2>
                 <p class="text-muted small mb-2">Enter property names separated by commas</p>
                 <textarea id="property-names" class="form-control mb-2"
                     placeholder="Examples:&#10;Name, Type&#10;AssemblyCode, Weight&#10;Material, Manufacturer"
                     rows="4">Name, Type</textarea>
                 <p class="text-muted" style="font-size: 11px; line-height: 1.4;">
-                    💡 <strong>IFC:</strong> Name, LABEL, Type<br>
+                    💡 <strong>IFC:</strong> Name, Tag, Type<br>
                     <strong>Common:</strong> Material, Width, Height
                 </p>
             </div>
@@ -86,18 +83,18 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="d-flex gap-2 mb-2 flex-wrap">
-            <button id="apply-btn" class="btn btn-primary flex-fill">
-                Create
-            </button>
-            <button id="clear-btn" class="btn btn-primary flex-fill">
+        <div class="d-flex gap-2 mb-2 flex-wrap" style="flex-direction: column;">
+            <button id="clear-btn" class="btn btn-primary">
                 Clear
+            </button>
+            <button id="apply-btn" class="btn btn-primary">
+                Create
             </button>
         </div>
 
-        <!-- Recreate Checkbox -->
-        <div class="d-flex justify-content-start mb-3" style="font-size: 0.875rem; gap: 16px;">
-            <div class="form-check">
+        <!-- Checkboxes -->
+        <div class="mb-3" style="font-size: 0.875rem;">
+            <div class="form-check mb-2">
                 <input class="form-check-input" type="checkbox" id="recreate-check" checked>
                 <label class="form-check-label" for="recreate-check">Recreate</label>
             </div>
@@ -108,19 +105,16 @@
         </div>
 
         <!-- Bounding Box Section -->
-        <div class="card mb-3">
-            <div class="card-body" style="padding: var(--spacing-2);">
-                <h6 class="card-title text-center mb-2" style="color: var(--trimble-gray-7); font-size: 0.875rem;">
-                    Bounding Box</h6>
-                <div class="d-flex gap-2">
-                    <button id="dimensions-btn" class="btn btn-primary flex-fill">Dimensions</button>
-                    <button id="box-btn" class="btn btn-primary flex-fill">Box</button>
-                </div>
+        <div class="mb-3">
+            <p class="text-muted small mb-2" style="text-align: center;">Bounding Box</p>
+            <div class="d-flex gap-2" style="flex-direction: column;">
+                <button id="box-btn" class="btn btn-primary">Box</button>
+                <button id="dimensions-btn" class="btn btn-primary">Dimensions</button>
             </div>
         </div>
 
         <!-- Selected Elements Info -->
-        <div class="card mb-3 border-success">
+        <div class="card mb-3 border-success" style="max-width: 75%;">
             <div class="card-body" style="background-color: #e8f5e9;">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="text-muted small">Selected Elements:</span>
@@ -134,17 +128,21 @@
         </div>
 
         <!-- Instructions -->
-        <div class="card mb-3">
-            <div class="card-body">
-                <h3 class="h6 mb-2">How to Use</h3>
-                <ol class="small text-muted mb-0" style="line-height: 1.7;">
+        <details class="mb-3">
+            <summary class="btn btn-sm btn-outline-secondary w-100 text-start">How to Use</summary>
+            <div class="mt-2" style="padding: 12px; background: #f8f9fa; border-radius: 6px;">
+                <ol class="small text-muted mb-2" style="line-height: 1.7;">
                     <li>Select elements in the 3D view (click or drag to select multiple)</li>
                     <li>Enter property names you want to display</li>
-                    <li>Click "Create Labels for Selected"</li>
+                    <li>Click "Create" to add labels</li>
                     <li>Labels appear in 3D view pointing to elements</li>
                 </ol>
+                <p class="small text-muted mb-0" style="line-height: 1.5;">
+                    <strong>Live Labels:</strong> When enabled, labels automatically update when you select/deselect
+                    elements in the 3D view. Unchecked Live Labels allows manual control.
+                </p>
             </div>
-        </div>
+        </details>
 
         <!-- Debug Log -->
         <details class="mb-3">

@@ -1,4 +1,4 @@
-// Trimble Connect Attribute Markup Tool v2.1
+// Trimble Connect Attribute Markup Tool v3.0
 // Uses official Workspace API TextMarkup to display property labels
 // Now supports selection API for batch/area selection
 
