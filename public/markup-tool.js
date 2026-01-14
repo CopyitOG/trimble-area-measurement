@@ -878,7 +878,7 @@ class AttributeMarkupTool {
                 // Track the object-to-markup mappings
                 for (let i = 0; i < textMarkups.length; i++) {
                     const markup = textMarkups[i];
-                    const markupId = addedMarkups[i];
+                    const markupId = addedMarkups[i].id;
 
                     // Extract objectId from the markup (it was attached during creation)
                     if (markup.objectId) {
