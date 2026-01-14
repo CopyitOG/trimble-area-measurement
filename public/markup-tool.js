@@ -805,6 +805,8 @@ class AttributeMarkupTool {
             this.log('🔍 Fetching all markups...');
             const allMarkups = await this.api.markup.getAllMarkups();
 
+            this.log(`📊 DEBUG getAllMarkups returned: type=${typeof allMarkups}, isArray=${Array.isArray(allMarkups)}, length=${allMarkups?.length}`);
+
             if (!allMarkups || allMarkups.length === 0) {
                 this.log('No markups in viewer');
                 // Still clear tracking
@@ -821,13 +823,17 @@ class AttributeMarkupTool {
             // Collect IDs of our markup types
             const idsToRemove = [];
             for (const markup of allMarkups) {
+                this.log(`📊 Markup: id=${markup.id}, type=${markup.type}`);
                 if (markup.type === 'text' || markup.type === 'point' ||
                     markup.type === 'line' || markup.type === 'measurement') {
                     idsToRemove.push(markup.id);
                 }
             }
 
+            this.log(`📊 DEBUG idsToRemove: ${JSON.stringify(idsToRemove)}`);
+
             if (idsToRemove.length > 0) {
+                this.log(`📊 DEBUG Calling removeMarkups with ${idsToRemove.length} IDs...`);
                 await this.api.markup.removeMarkups(idsToRemove);
                 this.log(`🗑️ Removed ${idsToRemove.length} markup(s)`);
             }
@@ -842,6 +848,7 @@ class AttributeMarkupTool {
 
         } catch (error) {
             this.log(`❌ Error clearing markups: ${error.message}`);
+            this.log(`❌ Stack: ${error.stack}`);
         }
     }
 
