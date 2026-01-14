@@ -542,12 +542,8 @@ class AttributeMarkupTool {
         for (const propName of this.propertyNames) {
             const value = this.findPropertyValue(objectProps, propName);
             if (value !== null && value !== undefined) {
-                // Format: "PropertyName: value" or just "value" if it's a single line
-                if (this.propertyNames.length === 1) {
-                    lines.push(String(value));
-                } else {
-                    lines.push(`${propName}: ${value}`);
-                }
+                // Display only the value, not the property name
+                lines.push(String(value));
             }
         }
 
